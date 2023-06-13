@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<!-- saved from url=(0076)https://grisha.org/blog/2016/01/29/triple-exponential-smoothing-forecasting/ -->
+<html class="js video maskImage placeholder" lang="en"><!--<![endif]--><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  
+  <title>Holt-Winters Forecasting for Dummies (or Developers) - Part I - Gregory Trubetskoy</title>
+  <meta name="author" content="Gregory Trubetskoy">
+
+  
+  <meta name="description" content="This three part write up [Part II
+Part III]
+is my attempt at a down-to-earth explanation (and Python code) of the
+Holt-Winters method for those of us …">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width,minimum-scale=1,maximum-scale=1">
+
+  
+  <link rel="canonical" href="https://grisha.org/blog/2016/01/29/triple-exponential-smoothing-forecasting">
+  <link href="https://grisha.org/favicon.png" rel="icon">
+  <link href="./Holt-Winters Forecasting for Dummies (or Developers) - Part I - Gregory Trubetskoy_files/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="https://grisha.org/atom.xml" rel="alternate" title="Gregory Trubetskoy" type="application/atom+xml">
+  <script type="text/javascript" async="" src="./Holt-Winters Forecasting for Dummies (or Developers) - Part I - Gregory Trubetskoy_files/ga.js.загружено"></script><script src="./Holt-Winters Forecasting for Dummies (or Developers) - Part I - Gregory Trubetskoy_files/modernizr-2.0.js.загружено"></script><style type="text/css" id="operaUserStyle"></style>
+  <script src="./Holt-Winters Forecasting for Dummies (or Developers) - Part I - Gregory Trubetskoy_files/jquery.min.js.загружено"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="./Holt-Winters Forecasting for Dummies (or Developers) - Part I - Gregory Trubetskoy_files/octopress.js.загружено" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="./Holt-Winters Forecasting for Dummies (or Developers) - Part I - Gregory Trubetskoy_files/css" rel="stylesheet" type="text/css">
+<link href="./Holt-Winters Forecasting for Dummies (or Developers) - Part I - Gregory Trubetskoy_files/css(1)" rel="stylesheet" type="text/css">
+
+<!-- MathJax -->
+<!-- mathjax config similar to math.stackexchange -->
+<script type="text/x-mathjax-config;executed=true">
+  MathJax.Hub.Config({
+  jax: ["input/TeX", "output/HTML-CSS"],
+  tex2jax: {
+    inlineMath: [ ['$', '$'] ],
+    displayMath: [ ['$$', '$$']],
+    processEscapes: true,
+  },
+  messageStyle: "none",
+  "HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] }
+  });
+</script>
+<!-- <script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML" type="text/javascript"></script> -->
+<script src="./Holt-Winters Forecasting for Dummies (or Developers) - Part I - Gregory Trubetskoy_files/MathJax.js.загружено" type="text/javascript"></script>
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-42971867-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+<script type="text/javascript" async="" src="./Holt-Winters Forecasting for Dummies (or Developers) - Part I - Gregory Trubetskoy_files/embed.js.загружено"></script><script type="text/javascript" async="" src="https://platform.twitter.com/widgets.js"></script><style type="text/css">.MathJax_Hover_Frame {border-radius: .25em; -webkit-border-radius: .25em; -moz-border-radius: .25em; -khtml-border-radius: .25em; box-shadow: 0px 0px 15px #83A; -webkit-box-shadow: 0px 0px 15px #83A; -moz-box-shadow: 0px 0px 15px #83A; -khtml-box-shadow: 0px 0px 15px #83A; border: 1px solid #A6D ! important; display: inline-block; position: absolute}
+.MathJax_Menu_Button .MathJax_Hover_Arrow {position: absolute; cursor: pointer; display: inline-block; border: 2px solid #AAA; border-radius: 4px; -webkit-border-radius: 4px; -moz-border-radius: 4px; -khtml-border-radius: 4px; font-family: 'Courier New',Courier; font-size: 9px; color: #F0F0F0}
+.MathJax_Menu_Button .MathJax_Hover_Arrow span {display: block; background-color: #AAA; border: 1px solid; border-radius: 3px; line-height: 0; padding: 4px}
+.MathJax_Hover_Arrow:hover {color: white!important; border: 2px solid #CCC!important}
+.MathJax_Hover_Arrow:hover span {background-color: #CCC!important}
+</style><style type="text/css">#MathJax_About {position: fixed; left: 50%; width: auto; text-align: center; border: 3px outset; padding: 1em 2em; background-color: #DDDDDD; color: black; cursor: default; font-family: message-box; font-size: 120%; font-style: normal; text-indent: 0; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal; word-wrap: normal; white-space: nowrap; float: none; z-index: 201; border-radius: 15px; -webkit-border-radius: 15px; -moz-border-radius: 15px; -khtml-border-radius: 15px; box-shadow: 0px 10px 20px #808080; -webkit-box-shadow: 0px 10px 20px #808080; -moz-box-shadow: 0px 10px 20px #808080; -khtml-box-shadow: 0px 10px 20px #808080; filter: progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color='gray', Positive='true')}
+#MathJax_About.MathJax_MousePost {outline: none}
+.MathJax_Menu {position: absolute; background-color: white; color: black; width: auto; padding: 2px; border: 1px solid #CCCCCC; margin: 0; cursor: default; font: menu; text-align: left; text-indent: 0; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal; word-wrap: normal; white-space: nowrap; float: none; z-index: 201; box-shadow: 0px 10px 20px #808080; -webkit-box-shadow: 0px 10px 20px #808080; -moz-box-shadow: 0px 10px 20px #808080; -khtml-box-shadow: 0px 10px 20px #808080; filter: progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color='gray', Positive='true')}
+.MathJax_MenuItem {padding: 2px 2em; background: transparent}
+.MathJax_MenuArrow {position: absolute; right: .5em; padding-top: .25em; color: #666666; font-size: .75em}
+.MathJax_MenuActive .MathJax_MenuArrow {color: white}
+.MathJax_MenuArrow.RTL {left: .5em; right: auto}
+.MathJax_MenuCheck {position: absolute; left: .7em}
+.MathJax_MenuCheck.RTL {right: .7em; left: auto}
+.MathJax_MenuRadioCheck {position: absolute; left: 1em}
+.MathJax_MenuRadioCheck.RTL {right: 1em; left: auto}
+.MathJax_MenuLabel {padding: 2px 2em 4px 1.33em; font-style: italic}
+.MathJax_MenuRule {border-top: 1px solid #CCCCCC; margin: 4px 1px 0px}
+.MathJax_MenuDisabled {color: GrayText}
+.MathJax_MenuActive {background-color: Highlight; color: HighlightText}
+.MathJax_MenuDisabled:focus, .MathJax_MenuLabel:focus {background-color: #E8E8E8}
+.MathJax_ContextMenu:focus {outline: none}
+.MathJax_ContextMenu .MathJax_MenuItem:focus {outline: none}
+#MathJax_AboutClose {top: .2em; right: .2em}
+.MathJax_Menu .MathJax_MenuClose {top: -10px; left: -10px}
+.MathJax_MenuClose {position: absolute; cursor: pointer; display: inline-block; border: 2px solid #AAA; border-radius: 18px; -webkit-border-radius: 18px; -moz-border-radius: 18px; -khtml-border-radius: 18px; font-family: 'Courier New',Courier; font-size: 24px; color: #F0F0F0}
+.MathJax_MenuClose span {display: block; background-color: #AAA; border: 1.5px solid; border-radius: 18px; -webkit-border-radius: 18px; -moz-border-radius: 18px; -khtml-border-radius: 18px; line-height: 0; padding: 8px 0 6px}
+.MathJax_MenuClose:hover {color: white!important; border: 2px solid #CCC!important}
+.MathJax_MenuClose:hover span {background-color: #CCC!important}
+.MathJax_MenuClose:hover:focus {outline: none}
+</style><style type="text/css">.MathJax_Preview .MJXf-math {color: inherit!important}
+</style><style type="text/css">.MJX_Assistive_MathML {position: absolute!important; top: 0; left: 0; clip: rect(1px, 1px, 1px, 1px); padding: 1px 0 0 0!important; border: 0!important; height: 1px!important; width: 1px!important; overflow: hidden!important; display: block!important; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none}
+.MJX_Assistive_MathML.MJX_Assistive_MathML_Block {width: 100%!important}
+</style><style type="text/css">#MathJax_Zoom {position: absolute; background-color: #F0F0F0; overflow: auto; display: block; z-index: 301; padding: .5em; border: 1px solid black; margin: 0; font-weight: normal; font-style: normal; text-align: left; text-indent: 0; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal; word-wrap: normal; white-space: nowrap; float: none; -webkit-box-sizing: content-box; -moz-box-sizing: content-box; box-sizing: content-box; box-shadow: 5px 5px 15px #AAAAAA; -webkit-box-shadow: 5px 5px 15px #AAAAAA; -moz-box-shadow: 5px 5px 15px #AAAAAA; -khtml-box-shadow: 5px 5px 15px #AAAAAA; filter: progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color='gray', Positive='true')}
+#MathJax_ZoomOverlay {position: absolute; left: 0; top: 0; z-index: 300; display: inline-block; width: 100%; height: 100%; border: 0; padding: 0; margin: 0; background-color: white; opacity: 0; filter: alpha(opacity=0)}
+#MathJax_ZoomFrame {position: relative; display: inline-block; height: 0; width: 0}
+#MathJax_ZoomEventTrap {position: absolute; left: 0; top: 0; z-index: 302; display: inline-block; border: 0; padding: 0; margin: 0; background-color: white; opacity: 0; filter: alpha(opacity=0)}
+</style><style type="text/css">.MathJax_Preview {color: #888}
+#MathJax_Message {position: fixed; left: 1em; bottom: 1.5em; background-color: #E6E6E6; border: 1px solid #959595; margin: 0px; padding: 2px 8px; z-index: 102; color: black; font-size: 80%; width: auto; white-space: nowrap}
+#MathJax_MSIE_Frame {position: absolute; top: 0; left: 0; width: 0px; z-index: 101; border: 0px; margin: 0px; padding: 0px}
+.MathJax_Error {color: #CC0000; font-style: italic}
+</style><style type="text/css">.MJXp-script {font-size: .8em}
+.MJXp-right {-webkit-transform-origin: right; -moz-transform-origin: right; -ms-transform-origin: right; -o-transform-origin: right; transform-origin: right}
+.MJXp-bold {font-weight: bold}
+.MJXp-italic {font-style: italic}
+.MJXp-scr {font-family: MathJax_Script,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-frak {font-family: MathJax_Fraktur,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-sf {font-family: MathJax_SansSerif,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-cal {font-family: MathJax_Caligraphic,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-mono {font-family: MathJax_Typewriter,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-largeop {font-size: 150%}
+.MJXp-largeop.MJXp-int {vertical-align: -.2em}
+.MJXp-math {display: inline-block; line-height: 1.2; text-indent: 0; font-family: 'Times New Roman',Times,STIXGeneral,serif; white-space: nowrap; border-collapse: collapse}
+.MJXp-display {display: block; text-align: center; margin: 1em 0}
+.MJXp-math span {display: inline-block}
+.MJXp-box {display: block!important; text-align: center}
+.MJXp-box:after {content: " "}
+.MJXp-rule {display: block!important; margin-top: .1em}
+.MJXp-char {display: block!important}
+.MJXp-mo {margin: 0 .15em}
+.MJXp-mfrac {margin: 0 .125em; vertical-align: .25em}
+.MJXp-denom {display: inline-table!important; width: 100%}
+.MJXp-denom > * {display: table-row!important}
+.MJXp-surd {vertical-align: top}
+.MJXp-surd > * {display: block!important}
+.MJXp-script-box > *  {display: table!important; height: 50%}
+.MJXp-script-box > * > * {display: table-cell!important; vertical-align: top}
+.MJXp-script-box > *:last-child > * {vertical-align: bottom}
+.MJXp-script-box > * > * > * {display: block!important}
+.MJXp-mphantom {visibility: hidden}
+.MJXp-munderover {display: inline-table!important}
+.MJXp-over {display: inline-block!important; text-align: center}
+.MJXp-over > * {display: block!important}
+.MJXp-munderover > * {display: table-row!important}
+.MJXp-mtable {vertical-align: .25em; margin: 0 .125em}
+.MJXp-mtable > * {display: inline-table!important; vertical-align: middle}
+.MJXp-mtr {display: table-row!important}
+.MJXp-mtd {display: table-cell!important; text-align: center; padding: .5em 0 0 .5em}
+.MJXp-mtr > .MJXp-mtd:first-child {padding-left: 0}
+.MJXp-mtr:first-child > .MJXp-mtd {padding-top: 0}
+.MJXp-mlabeledtr {display: table-row!important}
+.MJXp-mlabeledtr > .MJXp-mtd:first-child {padding-left: 0}
+.MJXp-mlabeledtr:first-child > .MJXp-mtd {padding-top: 0}
+.MJXp-merror {background-color: #FFFF88; color: #CC0000; border: 1px solid #CC0000; padding: 1px 3px; font-style: normal; font-size: 90%}
+.MJXp-scale0 {-webkit-transform: scaleX(.0); -moz-transform: scaleX(.0); -ms-transform: scaleX(.0); -o-transform: scaleX(.0); transform: scaleX(.0)}
+.MJXp-scale1 {-webkit-transform: scaleX(.1); -moz-transform: scaleX(.1); -ms-transform: scaleX(.1); -o-transform: scaleX(.1); transform: scaleX(.1)}
+.MJXp-scale2 {-webkit-transform: scaleX(.2); -moz-transform: scaleX(.2); -ms-transform: scaleX(.2); -o-transform: scaleX(.2); transform: scaleX(.2)}
+.MJXp-scale3 {-webkit-transform: scaleX(.3); -moz-transform: scaleX(.3); -ms-transform: scaleX(.3); -o-transform: scaleX(.3); transform: scaleX(.3)}
+.MJXp-scale4 {-webkit-transform: scaleX(.4); -moz-transform: scaleX(.4); -ms-transform: scaleX(.4); -o-transform: scaleX(.4); transform: scaleX(.4)}
+.MJXp-scale5 {-webkit-transform: scaleX(.5); -moz-transform: scaleX(.5); -ms-transform: scaleX(.5); -o-transform: scaleX(.5); transform: scaleX(.5)}
+.MJXp-scale6 {-webkit-transform: scaleX(.6); -moz-transform: scaleX(.6); -ms-transform: scaleX(.6); -o-transform: scaleX(.6); transform: scaleX(.6)}
+.MJXp-scale7 {-webkit-transform: scaleX(.7); -moz-transform: scaleX(.7); -ms-transform: scaleX(.7); -o-transform: scaleX(.7); transform: scaleX(.7)}
+.MJXp-scale8 {-webkit-transform: scaleX(.8); -moz-transform: scaleX(.8); -ms-transform: scaleX(.8); -o-transform: scaleX(.8); transform: scaleX(.8)}
+.MJXp-scale9 {-webkit-transform: scaleX(.9); -moz-transform: scaleX(.9); -ms-transform: scaleX(.9); -o-transform: scaleX(.9); transform: scaleX(.9)}
+.MathJax_PHTML .noError {vertical-align: ; font-size: 90%; text-align: left; color: black; padding: 1px 3px; border: 1px solid}
+</style><style type="text/css">.MathJax_Display {text-align: center; margin: 1em 0em; position: relative; display: block!important; text-indent: 0; max-width: none; max-height: none; min-width: 0; min-height: 0; width: 100%}
+.MathJax .merror {background-color: #FFFF88; color: #CC0000; border: 1px solid #CC0000; padding: 1px 3px; font-style: normal; font-size: 90%}
+.MathJax .MJX-monospace {font-family: monospace}
+.MathJax .MJX-sans-serif {font-family: sans-serif}
+#MathJax_Tooltip {background-color: InfoBackground; color: InfoText; border: 1px solid black; box-shadow: 2px 2px 5px #AAAAAA; -webkit-box-shadow: 2px 2px 5px #AAAAAA; -moz-box-shadow: 2px 2px 5px #AAAAAA; -khtml-box-shadow: 2px 2px 5px #AAAAAA; filter: progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color='gray', Positive='true'); padding: 3px 4px; z-index: 401; position: absolute; left: 0; top: 0; width: auto; height: auto; display: none}
+.MathJax {display: inline; font-style: normal; font-weight: normal; line-height: normal; font-size: 100%; font-size-adjust: none; text-indent: 0; text-align: left; text-transform: none; letter-spacing: normal; word-spacing: normal; word-wrap: normal; white-space: nowrap; float: none; direction: ltr; max-width: none; max-height: none; min-width: 0; min-height: 0; border: 0; padding: 0; margin: 0}
+.MathJax:focus, body :focus .MathJax {display: inline-table}
+.MathJax.MathJax_FullWidth {text-align: center; display: table-cell!important; width: 10000em!important}
+.MathJax img, .MathJax nobr, .MathJax a {border: 0; padding: 0; margin: 0; max-width: none; max-height: none; min-width: 0; min-height: 0; vertical-align: 0; line-height: normal; text-decoration: none}
+img.MathJax_strut {border: 0!important; padding: 0!important; margin: 0!important; vertical-align: 0!important}
+.MathJax span {display: inline; position: static; border: 0; padding: 0; margin: 0; vertical-align: 0; line-height: normal; text-decoration: none}
+.MathJax nobr {white-space: nowrap!important}
+.MathJax img {display: inline!important; float: none!important}
+.MathJax * {transition: none; -webkit-transition: none; -moz-transition: none; -ms-transition: none; -o-transition: none}
+.MathJax_Processing {visibility: hidden; position: fixed; width: 0; height: 0; overflow: hidden}
+.MathJax_Processed {display: none!important}
+.MathJax_ExBox {display: block!important; overflow: hidden; width: 1px; height: 60ex; min-height: 0; max-height: none}
+.MathJax .MathJax_EmBox {display: block!important; overflow: hidden; width: 1px; height: 60em; min-height: 0; max-height: none}
+.MathJax_LineBox {display: table!important}
+.MathJax_LineBox span {display: table-cell!important; width: 10000em!important; min-width: 0; max-width: none; padding: 0; border: 0; margin: 0}
+.MathJax .MathJax_HitBox {cursor: text; background: white; opacity: 0; filter: alpha(opacity=0)}
+.MathJax .MathJax_HitBox * {filter: none; opacity: 1; background: transparent}
+#MathJax_Tooltip * {filter: none; opacity: 1; background: transparent}
+@font-face {font-family: MathJax_Main; src: url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/fonts/HTML-CSS/TeX/woff/MathJax_Main-Regular.woff?V=2.7.0') format('woff'), url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/fonts/HTML-CSS/TeX/otf/MathJax_Main-Regular.otf?V=2.7.0') format('opentype')}
+@font-face {font-family: MathJax_Main-bold; src: url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/fonts/HTML-CSS/TeX/woff/MathJax_Main-Bold.woff?V=2.7.0') format('woff'), url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/fonts/HTML-CSS/TeX/otf/MathJax_Main-Bold.otf?V=2.7.0') format('opentype')}
+@font-face {font-family: MathJax_Main-italic; src: url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/fonts/HTML-CSS/TeX/woff/MathJax_Main-Italic.woff?V=2.7.0') format('woff'), url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/fonts/HTML-CSS/TeX/otf/MathJax_Main-Italic.otf?V=2.7.0') format('opentype')}
+@font-face {font-family: MathJax_Math-italic; src: url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/fonts/HTML-CSS/TeX/woff/MathJax_Math-Italic.woff?V=2.7.0') format('woff'), url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/fonts/HTML-CSS/TeX/otf/MathJax_Math-Italic.otf?V=2.7.0') format('opentype')}
+@font-face {font-family: MathJax_Caligraphic; src: url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/fonts/HTML-CSS/TeX/woff/MathJax_Caligraphic-Regular.woff?V=2.7.0') format('woff'), url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/fonts/HTML-CSS/TeX/otf/MathJax_Caligraphic-Regular.otf?V=2.7.0') format('opentype')}
+@font-face {font-family: MathJax_Size1; src: url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/fonts/HTML-CSS/TeX/woff/MathJax_Size1-Regular.woff?V=2.7.0') format('woff'), url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/fonts/HTML-CSS/TeX/otf/MathJax_Size1-Regular.otf?V=2.7.0') format('opentype')}
+@font-face {font-family: MathJax_Size2; src: url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/fonts/HTML-CSS/TeX/woff/MathJax_Size2-Regular.woff?V=2.7.0') format('woff'), url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/fonts/HTML-CSS/TeX/otf/MathJax_Size2-Regular.otf?V=2.7.0') format('opentype')}
+@font-face {font-family: MathJax_Size3; src: url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/fonts/HTML-CSS/TeX/woff/MathJax_Size3-Regular.woff?V=2.7.0') format('woff'), url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/fonts/HTML-CSS/TeX/otf/MathJax_Size3-Regular.otf?V=2.7.0') format('opentype')}
+@font-face {font-family: MathJax_Size4; src: url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/fonts/HTML-CSS/TeX/woff/MathJax_Size4-Regular.woff?V=2.7.0') format('woff'), url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/fonts/HTML-CSS/TeX/otf/MathJax_Size4-Regular.otf?V=2.7.0') format('opentype')}
+.MathJax .noError {vertical-align: ; font-size: 90%; text-align: left; color: black; padding: 1px 3px; border: 1px solid}
+</style></head>
+
+<body><div style="visibility: hidden; overflow: hidden; position: absolute; top: 0px; height: 1px; width: auto; padding: 0px; border: 0px; margin: 0px; text-align: left; text-indent: 0px; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal;"><div id="MathJax_Hidden"></div></div><div id="MathJax_Message" style="display: none;"></div>
+  <header role="banner"><hgroup>
+  <h1><a href="https://grisha.org/">Gregory Trubetskoy</a></h1>
+  
+    <h2>Notes to self.</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="https://grisha.org/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="https://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:grisha.org">
+    <input class="search" type="text" name="q" results="0" placeholder="Search">
+  </fieldset><fieldset class="mobile-nav"><select><option value="">Navigate…</option><option value="https://grisha.org/">» Blog</option><option value="https://grisha.org/blog/archives">» Archives</option><option value="https://grisha.org/atom.xml">» RSS</option></select></fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="https://grisha.org/">Blog</a></li>
+  <li><a href="https://grisha.org/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Holt-Winters Forecasting for Dummies (or Developers) - Part I</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2016-01-29T15:36:00-05:00" pubdate="" data-updated="true">Jan 29<span>th</span>, 2016</time>
+        
+         | <a href="https://grisha.org/blog/2016/01/29/triple-exponential-smoothing-forecasting/#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>This three part write up [<a href="https://grisha.org/blog/2016/02/16/triple-exponential-smoothing-forecasting-part-ii/">Part II</a>
+<a href="https://grisha.org/blog/2016/02/17/triple-exponential-smoothing-forecasting-part-iii/">Part III</a>]
+is my attempt at a down-to-earth explanation (and Python code) of the
+Holt-Winters method for those of us who while hypothetically might be
+quite good at math, still try to avoid it at every opportunity. I had
+to dive into this subject while tinkering on
+<a href="https://github.com/tgres/tgres">tgres</a> (which features a Golang implementation). And
+having found it somewhat complex (and yet so brilliantly
+simple), figured that it’d be good to share this knowledge, and
+in the process, to hopefully solidify it in my head as well.</p>
+
+<p><a href="https://en.wikipedia.org/wiki/Exponential_smoothing#Triple_exponential_smoothing">Triple Exponential Smoothing</a>,
+also known as the Holt-Winters method, is one of the many methods or
+algorithms that can be used to forecast data points in a series,
+provided that the series is “seasonal”, i.e. repetitive over some
+period.</p>
+
+<p><img src="./Holt-Winters Forecasting for Dummies (or Developers) - Part I - Gregory Trubetskoy_files/hw00.png"></p>
+
+<h1 id="a-little-history">A little history</h1>
+
+<p>Еxponential smoothing in some form or another dates back to the work
+of <a href="https://en.wikipedia.org/wiki/Sim%C3%A9on_Denis_Poisson">Siméon Poisson</a> (1781-1840),
+while its application in forecasting appears to have been pioneered over a century later in 1956 by
+<a href="https://en.wikipedia.org/wiki/Robert_Goodell_Brown">Robert Brown</a> (1923–2013)
+in his publication
+<a href="https://industrydocuments.library.ucsf.edu/tobacco/docs/#id=jzlc0130">Exponential Smoothing for Predicting Demand</a>,
+(Cambridge, Massachusetts). [Based on the URL it seems Brown was working on forecasting tobacco demand?]</p>
+
+<p>In 1957 an <a href="http://web.mit.edu/">MIT</a> and <a href="http://www.uchicago.edu/">University of Chicago</a>
+graduate, professor <a href="https://en.wikipedia.org/wiki/Charles_C._Holt">Charles C Holt</a>
+(1921-2010) was working at <a href="http://www.cmu.edu/">CMU</a> (then known as CIT) on forecasting trends in production,
+inventories and labor force.
+It appears that Holt and Brown worked independently  and knew not of each-other’s work.
+Holt published a paper “Forecasting trends
+and seasonals by exponentially weighted moving averages” (Office of Naval Research Research
+Memorandum No. 52, Carnegie Institute of Technology) describing
+double exponential smoothing. Three years later, in 1960, a student of
+Holts (?) Peter R. Winters improved the algorithm by adding seasonality and
+published
+<a href="http://pubsonline.informs.org/doi/abs/10.1287/mnsc.6.3.324">Forecasting sales by exponentially weighted moving averages</a>
+(Management Science 6, 324–342), citing Dr. Holt’s 1957 paper as earlier work on the same subject.
+This algorithm became known as triple exponential smoothing or the Holt-Winters method,
+the latter probably because it was described in a 1960 Prentice-Hall book “Planning Production, Inventories, and Work Force”
+by Holt, <a href="https://en.wikipedia.org/wiki/Franco_Modigliani">Modigliani</a>, <a href="https://en.wikipedia.org/wiki/John_Muth">Muth</a>,
+<a href="https://en.wikipedia.org/wiki/Herbert_A._Simon">Simon</a>,
+<a href="https://www.gsb.stanford.edu/faculty-research/faculty/charles-puis-bonini">Bonini</a> and Winters - good luck finding a copy!</p>
+
+<p>Curiously, I’ve not been able to find any personal information on Peter R. Winters online. If you find anything, please let me
+know, I’ll add a reference here.</p>
+
+<p>In 2000 the Holt-Winters method became well known in the <a href="https://en.wikipedia.org/wiki/Internet_service_provider">ISP</a>
+circles at the height of the <a href="https://en.wikipedia.org/wiki/Dot-com_bubble">.com boom</a> when Jake D. Brutlag (then of WebTV) published
+<a href="https://www.google.com/url?sa=t&amp;rct=j&amp;q=&amp;esrc=s&amp;source=web&amp;cd=1&amp;cad=rja&amp;uact=8&amp;ved=0ahUKEwiAx9SNoezKAhXCC5oKHZZ4A84QFgghMAA&amp;url=https%3A%2F%2Fwww.usenix.org%2Fevents%2Flisa00%2Ffull_papers%2Fbrutlag%2Fbrutlag.pdf&amp;usg=AFQjCNEg-ynB5Ok0Sf4ATBB77PcGwT4OLw&amp;bvm=bv.113943665,d.bGs">Aberrant Behavior Detection in Time Series for Network Monitoring</a>
+(Proceedings of the 14th Systems Administration Conference, LISA
+2000). It described how an open source <a href="https://en.wikipedia.org/wiki/C_%28programming_language%29">C</a>
+implementation [<a href="https://github.com/oetiker/rrdtool-1.x/commit/cafbbce69d9d1d4a1772299d97138b5a81d343f5">link to the actual commit</a>]
+of a variant of the Holt-Winters seasonal method, which he contributed as a feature
+to the very popular at ISPs <a href="http://oss.oetiker.ch/rrdtool/">RRDTool</a>, could be used to
+monitor network traffic.</p>
+
+<p>In 2003, a remarkable 40+ years since the publication of Winters
+paper, professor <a href="http://www.sbs.ox.ac.uk/community/people/james-taylor">James W Taylor</a>
+of <a href="http://www.ox.ac.uk/">Oxford University</a> extended the
+Holt-Winters method to multiple seasonalities (i.e. <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-1-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;n&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-1" style="width: 0.705em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.611em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.783em, 1000.61em, 2.485em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-2"><span class="mi" id="MathJax-Span-3" style="font-family: MathJax_Math-italic;">n</span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.052em; border-left: 0px solid; width: 0px; height: 0.655em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>n</mi></math></span></span><script type="math/tex" id="MathJax-Element-1">n</script>-th exponential
+smoothing) and published <a href="http://users.ox.ac.uk/~mast0315/ExpSmDoubleSeasonal.pdf">Short-term electricity demand forecasting using double seasonal exponential smoothing</a>
+(Journal of Operational
+Research Society, vol. 54, pp. 799–805). (But we won’t cover Taylors
+method here).</p>
+
+<p>In 2011 the RRDTool implementation contributed by Brutlag was
+<a href="https://github.com/graphite-project/graphite-web/commit/4e7a0d664ea2153ea65173138ab8f337716e21fa">ported</a>
+to <a href="http://graphite.readthedocs.org/en/latest/">Graphite</a> by Matthew Graham thus making it even more popular in the
+devops community.</p>
+
+<p>So… how does it work?</p>
+
+<h1 id="forecasting-baby-steps">Forecasting, Baby Steps</h1>
+
+<p>The best way to explain triple exponential smoothing is to gradually
+build up to it starting with the simplest forecasting methods. Lest
+this text gets too long, we will stop at triple exponential smoothing,
+though there are quite a few other methods known.</p>
+
+<p>I used mathematical notation only where I thought it made best sense, sometimes
+accompanied by an “English translation”, and where appropriate
+supplemented with a bit of <a href="https://www.python.org/">Python</a> code.
+In Python I refrain from using any non-standard packages, keeping the
+examples plain. I chose not to use <a href="https://wiki.python.org/moin/Generators">generators</a>
+for clarity. The objective here is to explain
+the inner working of the algorithm so that you can implement it
+yourself in whatever language you prefer.</p>
+
+<p>I also hope to demonstrate that this is simple enough that you do not
+need to resort to <a href="http://www.scipy.org/">SciPy</a> or <a href="https://en.wikipedia.org/wiki/R_%28programming_language%29">whatever</a>
+(not that there is anything wrong with that).</p>
+
+<h2 id="but-first-some-terminology">But First, Some Terminology</h2>
+
+<h3 id="series"><em>Series</em></h3>
+
+<p>The main subject here is a <em>series</em>. In the real world we are most
+likely to be applying this to a <em>time series</em>, but for this discussion
+the time aspect is irrelevant. A series is merely an ordered sequence
+of numbers. We might be using words that are chronological in nature
+(past, future, yet, already, <em>time</em> even!), but only because it makes it easer to
+understand. So forget about time, timestamps, intervals,
+<a href="http://www.preposterousuniverse.com/blog/2013/10/18/is-time-real/">time does not exist</a>,
+the only property each data point has (other than the value) is its order: first,
+next, previous, last, etc.</p>
+
+<p>It is useful to think of a series as a list of two-dimensional <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-2-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;x&lt;/mi&gt;&lt;mo&gt;,&lt;/mo&gt;&lt;mi&gt;y&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-4" style="width: 1.83em; display: inline-block;"><span style="display: inline-block; position: relative; width: 1.548em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.783em, 1001.55em, 2.673em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-5"><span class="mi" id="MathJax-Span-6" style="font-family: MathJax_Math-italic;">x</span><span class="mo" id="MathJax-Span-7" style="font-family: MathJax_Main;">,</span><span class="mi" id="MathJax-Span-8" style="font-family: MathJax_Math-italic; padding-left: 0.19em;">y<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.002em;"></span></span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.269em; border-left: 0px solid; width: 0px; height: 0.872em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>x</mi><mo>,</mo><mi>y</mi></math></span></span><script type="math/tex" id="MathJax-Element-2">x,y</script>
+coordinates, where <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-3-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;x&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-9" style="width: 0.658em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.565em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.783em, 1000.52em, 2.485em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-10"><span class="mi" id="MathJax-Span-11" style="font-family: MathJax_Math-italic;">x</span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.052em; border-left: 0px solid; width: 0px; height: 0.655em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>x</mi></math></span></span><script type="math/tex" id="MathJax-Element-3">x</script> is order (always going up by 1), and <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-4-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;y&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-12" style="width: 0.611em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.518em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.783em, 1000.52em, 2.673em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-13"><span class="mi" id="MathJax-Span-14" style="font-family: MathJax_Math-italic;">y<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.002em;"></span></span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.269em; border-left: 0px solid; width: 0px; height: 0.872em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>y</mi></math></span></span><script type="math/tex" id="MathJax-Element-4">y</script> is
+value. For this reason in our math formulas we will be sticking to <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-5-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;y&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-15" style="width: 0.611em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.518em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.783em, 1000.52em, 2.673em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-16"><span class="mi" id="MathJax-Span-17" style="font-family: MathJax_Math-italic;">y<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.002em;"></span></span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.269em; border-left: 0px solid; width: 0px; height: 0.872em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>y</mi></math></span></span><script type="math/tex" id="MathJax-Element-5">y</script>
+for value and <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-6-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;x&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-18" style="width: 0.658em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.565em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.783em, 1000.52em, 2.485em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-19"><span class="mi" id="MathJax-Span-20" style="font-family: MathJax_Math-italic;">x</span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.052em; border-left: 0px solid; width: 0px; height: 0.655em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>x</mi></math></span></span><script type="math/tex" id="MathJax-Element-6">x</script> for order.</p>
+
+<h3 id="observed-vs-expected"><em>Observed</em> vs <em>Expected</em></h3>
+
+<p>Forecasting is estimating values that we do not yet know based on the
+the values we do know. The values we know are referred to as
+<em>observed</em> while the values we forecast as <em>expected</em>. The math
+convention to denote expected values is with the
+<a href="https://en.wikipedia.org/wiki/Circumflex">circumflex</a> a.k.a. “hat”: <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-7-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mrow class=&quot;MJX-TeXAtom-ORD&quot;&gt;&lt;mover&gt;&lt;mi&gt;y&lt;/mi&gt;&lt;mo stretchy=&quot;false&quot;&gt;&amp;#x005E;&lt;/mo&gt;&lt;/mover&gt;&lt;/mrow&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-21" style="width: 0.658em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.565em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.502em, 1000.47em, 2.673em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-22"><span class="texatom" id="MathJax-Span-23"><span class="mrow" id="MathJax-Span-24"><span class="munderover" id="MathJax-Span-25"><span style="display: inline-block; position: relative; width: 0.565em; height: 0px;"><span style="position: absolute; clip: rect(3.423em, 1000.52em, 4.313em, -999.998em); top: -3.98em; left: 0.002em;"><span class="mi" id="MathJax-Span-26" style="font-family: MathJax_Math-italic;">y<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.002em;"></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; clip: rect(3.141em, 1000.38em, 3.61em, -999.998em); top: -4.027em; left: 0.096em;"><span class="mo" id="MathJax-Span-27" style="font-family: MathJax_Main;">^</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span></span></span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.269em; border-left: 0px solid; width: 0px; height: 1.198em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mrow class="MJX-TeXAtom-ORD"><mover><mi>y</mi><mo stretchy="false">^</mo></mover></mrow></math></span></span><script type="math/tex" id="MathJax-Element-7">\hat{y}</script></p>
+
+<p>For example, if we have a series that looks like <code>[1,2,3]</code>, we might
+forecast the next value to be 4. Using this terminology, given
+observed series <code>[1,2,3]</code> the next expected value <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-8-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mrow class=&quot;MJX-TeXAtom-ORD&quot;&gt;&lt;msub&gt;&lt;mrow class=&quot;MJX-TeXAtom-ORD&quot;&gt;&lt;mover&gt;&lt;mi&gt;y&lt;/mi&gt;&lt;mo stretchy=&quot;false&quot;&gt;&amp;#x005E;&lt;/mo&gt;&lt;/mover&gt;&lt;/mrow&gt;&lt;mn&gt;4&lt;/mn&gt;&lt;/msub&gt;&lt;/mrow&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-28" style="width: 1.22em; display: inline-block;"><span style="display: inline-block; position: relative; width: 1.033em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.502em, 1001.03em, 2.72em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-29"><span class="texatom" id="MathJax-Span-30"><span class="mrow" id="MathJax-Span-31"><span class="msubsup" id="MathJax-Span-32"><span style="display: inline-block; position: relative; width: 1.033em; height: 0px;"><span style="position: absolute; clip: rect(3.141em, 1000.52em, 4.313em, -999.998em); top: -3.98em; left: 0em;"><span class="texatom" id="MathJax-Span-33"><span class="mrow" id="MathJax-Span-34"><span class="munderover" id="MathJax-Span-35"><span style="display: inline-block; position: relative; width: 0.565em; height: 0px;"><span style="position: absolute; clip: rect(3.423em, 1000.52em, 4.313em, -999.998em); top: -3.98em; left: 0.002em;"><span class="mi" id="MathJax-Span-36" style="font-family: MathJax_Math-italic;">y<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.002em;"></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; clip: rect(3.141em, 1000.38em, 3.61em, -999.998em); top: -4.027em; left: 0.096em;"><span class="mo" id="MathJax-Span-37" style="font-family: MathJax_Main;">^</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; top: -3.746em; left: 0.565em;"><span class="mn" id="MathJax-Span-38" style="font-size: 70.7%; font-family: MathJax_Main;">4</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span></span></span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.323em; border-left: 0px solid; width: 0px; height: 1.253em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mrow class="MJX-TeXAtom-ORD"><msub><mrow class="MJX-TeXAtom-ORD"><mover><mi>y</mi><mo stretchy="false">^</mo></mover></mrow><mn>4</mn></msub></mrow></math></span></span><script type="math/tex" id="MathJax-Element-8">{\hat{y}_4}</script> is 4.</p>
+
+<h3 id="method"><em>Method</em></h3>
+
+<p>We may have intuited based on <code>[1,2,3]</code> that in this series each value
+is 1 greater than the previous, which in math notation can
+be expressed as and <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-9-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;msub&gt;&lt;mrow class=&quot;MJX-TeXAtom-ORD&quot;&gt;&lt;mover&gt;&lt;mi&gt;y&lt;/mi&gt;&lt;mo stretchy=&quot;false&quot;&gt;&amp;#x005E;&lt;/mo&gt;&lt;/mover&gt;&lt;/mrow&gt;&lt;mrow class=&quot;MJX-TeXAtom-ORD&quot;&gt;&lt;mi&gt;x&lt;/mi&gt;&lt;mo&gt;+&lt;/mo&gt;&lt;mn&gt;1&lt;/mn&gt;&lt;/mrow&gt;&lt;/msub&gt;&lt;mo&gt;=&lt;/mo&gt;&lt;msub&gt;&lt;mi&gt;y&lt;/mi&gt;&lt;mi&gt;x&lt;/mi&gt;&lt;/msub&gt;&lt;mo&gt;+&lt;/mo&gt;&lt;mn&gt;1&lt;/mn&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-39" style="width: 7.03em; display: inline-block;"><span style="display: inline-block; position: relative; width: 6.046em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.502em, 1005.95em, 2.767em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-40"><span class="msubsup" id="MathJax-Span-41"><span style="display: inline-block; position: relative; width: 1.97em; height: 0px;"><span style="position: absolute; clip: rect(3.141em, 1000.52em, 4.313em, -999.998em); top: -3.98em; left: 0em;"><span class="texatom" id="MathJax-Span-42"><span class="mrow" id="MathJax-Span-43"><span class="munderover" id="MathJax-Span-44"><span style="display: inline-block; position: relative; width: 0.565em; height: 0px;"><span style="position: absolute; clip: rect(3.423em, 1000.52em, 4.313em, -999.998em); top: -3.98em; left: 0.002em;"><span class="mi" id="MathJax-Span-45" style="font-family: MathJax_Math-italic;">y<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.002em;"></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; clip: rect(3.141em, 1000.38em, 3.61em, -999.998em); top: -4.027em; left: 0.096em;"><span class="mo" id="MathJax-Span-46" style="font-family: MathJax_Main;">^</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; top: -3.746em; left: 0.565em;"><span class="texatom" id="MathJax-Span-47"><span class="mrow" id="MathJax-Span-48"><span class="mi" id="MathJax-Span-49" style="font-size: 70.7%; font-family: MathJax_Math-italic;">x</span><span class="mo" id="MathJax-Span-50" style="font-size: 70.7%; font-family: MathJax_Main;">+</span><span class="mn" id="MathJax-Span-51" style="font-size: 70.7%; font-family: MathJax_Main;">1</span></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span><span class="mo" id="MathJax-Span-52" style="font-family: MathJax_Main; padding-left: 0.283em;">=</span><span class="msubsup" id="MathJax-Span-53" style="padding-left: 0.283em;"><span style="display: inline-block; position: relative; width: 0.986em; height: 0px;"><span style="position: absolute; clip: rect(3.423em, 1000.52em, 4.313em, -999.998em); top: -3.98em; left: 0em;"><span class="mi" id="MathJax-Span-54" style="font-family: MathJax_Math-italic;">y<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.002em;"></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; top: -3.839em; left: 0.471em;"><span class="mi" id="MathJax-Span-55" style="font-size: 70.7%; font-family: MathJax_Math-italic;">x</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span><span class="mo" id="MathJax-Span-56" style="font-family: MathJax_Main; padding-left: 0.237em;">+</span><span class="mn" id="MathJax-Span-57" style="font-family: MathJax_Main; padding-left: 0.237em;">1</span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.378em; border-left: 0px solid; width: 0px; height: 1.307em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><msub><mrow class="MJX-TeXAtom-ORD"><mover><mi>y</mi><mo stretchy="false">^</mo></mover></mrow><mrow class="MJX-TeXAtom-ORD"><mi>x</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>=</mo><msub><mi>y</mi><mi>x</mi></msub><mo>+</mo><mn>1</mn></math></span></span><script type="math/tex" id="MathJax-Element-9">\hat{y}_{x + 1} = y_x + 1</script>.  This equation, the
+result of our intuition, is known as a forecast <em>method</em>.</p>
+
+<p>If our method is correct then the next observed value would indeed be
+4, but if <code>[1,2,3]</code> is actually part of a
+<a href="https://en.wikipedia.org/wiki/Fibonacci_number">Fibonacci sequence</a>, then where we
+expected <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-10-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mrow class=&quot;MJX-TeXAtom-ORD&quot;&gt;&lt;msub&gt;&lt;mrow class=&quot;MJX-TeXAtom-ORD&quot;&gt;&lt;mover&gt;&lt;mi&gt;y&lt;/mi&gt;&lt;mo stretchy=&quot;false&quot;&gt;&amp;#x005E;&lt;/mo&gt;&lt;/mover&gt;&lt;/mrow&gt;&lt;mn&gt;4&lt;/mn&gt;&lt;/msub&gt;&lt;mo&gt;=&lt;/mo&gt;&lt;mn&gt;4&lt;/mn&gt;&lt;/mrow&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-58" style="width: 3.329em; display: inline-block;"><span style="display: inline-block; position: relative; width: 2.86em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.502em, 1002.81em, 2.72em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-59"><span class="texatom" id="MathJax-Span-60"><span class="mrow" id="MathJax-Span-61"><span class="msubsup" id="MathJax-Span-62"><span style="display: inline-block; position: relative; width: 1.033em; height: 0px;"><span style="position: absolute; clip: rect(3.141em, 1000.52em, 4.313em, -999.998em); top: -3.98em; left: 0em;"><span class="texatom" id="MathJax-Span-63"><span class="mrow" id="MathJax-Span-64"><span class="munderover" id="MathJax-Span-65"><span style="display: inline-block; position: relative; width: 0.565em; height: 0px;"><span style="position: absolute; clip: rect(3.423em, 1000.52em, 4.313em, -999.998em); top: -3.98em; left: 0.002em;"><span class="mi" id="MathJax-Span-66" style="font-family: MathJax_Math-italic;">y<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.002em;"></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; clip: rect(3.141em, 1000.38em, 3.61em, -999.998em); top: -4.027em; left: 0.096em;"><span class="mo" id="MathJax-Span-67" style="font-family: MathJax_Main;">^</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; top: -3.746em; left: 0.565em;"><span class="mn" id="MathJax-Span-68" style="font-size: 70.7%; font-family: MathJax_Main;">4</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span><span class="mo" id="MathJax-Span-69" style="font-family: MathJax_Main; padding-left: 0.283em;">=</span><span class="mn" id="MathJax-Span-70" style="font-family: MathJax_Main; padding-left: 0.283em;">4</span></span></span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.323em; border-left: 0px solid; width: 0px; height: 1.253em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mrow class="MJX-TeXAtom-ORD"><msub><mrow class="MJX-TeXAtom-ORD"><mover><mi>y</mi><mo stretchy="false">^</mo></mover></mrow><mn>4</mn></msub><mo>=</mo><mn>4</mn></mrow></math></span></span><script type="math/tex" id="MathJax-Element-10">{\hat{y}_4 = 4}</script>, we would observe <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-11-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;msub&gt;&lt;mi&gt;y&lt;/mi&gt;&lt;mn&gt;4&lt;/mn&gt;&lt;/msub&gt;&lt;mo&gt;=&lt;/mo&gt;&lt;mn&gt;5&lt;/mn&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-71" style="width: 3.235em; display: inline-block;"><span style="display: inline-block; position: relative; width: 2.767em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.548em, 1002.72em, 2.673em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-72"><span class="msubsup" id="MathJax-Span-73"><span style="display: inline-block; position: relative; width: 0.939em; height: 0px;"><span style="position: absolute; clip: rect(3.423em, 1000.52em, 4.313em, -999.998em); top: -3.98em; left: 0em;"><span class="mi" id="MathJax-Span-74" style="font-family: MathJax_Math-italic;">y<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.002em;"></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; top: -3.839em; left: 0.471em;"><span class="mn" id="MathJax-Span-75" style="font-size: 70.7%; font-family: MathJax_Main;">4</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span><span class="mo" id="MathJax-Span-76" style="font-family: MathJax_Main; padding-left: 0.283em;">=</span><span class="mn" id="MathJax-Span-77" style="font-family: MathJax_Main; padding-left: 0.283em;">5</span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.269em; border-left: 0px solid; width: 0px; height: 1.144em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><msub><mi>y</mi><mn>4</mn></msub><mo>=</mo><mn>5</mn></math></span></span><script type="math/tex" id="MathJax-Element-11">y_4 = 5</script>. Note the hatted
+<span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-12-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mrow class=&quot;MJX-TeXAtom-ORD&quot;&gt;&lt;mrow class=&quot;MJX-TeXAtom-ORD&quot;&gt;&lt;mover&gt;&lt;mi&gt;y&lt;/mi&gt;&lt;mo stretchy=&quot;false&quot;&gt;&amp;#x005E;&lt;/mo&gt;&lt;/mover&gt;&lt;/mrow&gt;&lt;/mrow&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-78" style="width: 0.658em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.565em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.502em, 1000.47em, 2.673em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-79"><span class="texatom" id="MathJax-Span-80"><span class="mrow" id="MathJax-Span-81"><span class="texatom" id="MathJax-Span-82"><span class="mrow" id="MathJax-Span-83"><span class="munderover" id="MathJax-Span-84"><span style="display: inline-block; position: relative; width: 0.565em; height: 0px;"><span style="position: absolute; clip: rect(3.423em, 1000.52em, 4.313em, -999.998em); top: -3.98em; left: 0.002em;"><span class="mi" id="MathJax-Span-85" style="font-family: MathJax_Math-italic;">y<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.002em;"></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; clip: rect(3.141em, 1000.38em, 3.61em, -999.998em); top: -4.027em; left: 0.096em;"><span class="mo" id="MathJax-Span-86" style="font-family: MathJax_Main;">^</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span></span></span></span></span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.269em; border-left: 0px solid; width: 0px; height: 1.198em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mrow class="MJX-TeXAtom-ORD"><mrow class="MJX-TeXAtom-ORD"><mover><mi>y</mi><mo stretchy="false">^</mo></mover></mrow></mrow></math></span></span><script type="math/tex" id="MathJax-Element-12">{\hat{y}}</script> (expected) in the former and <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-13-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;y&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-87" style="width: 0.611em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.518em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.783em, 1000.52em, 2.673em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-88"><span class="mi" id="MathJax-Span-89" style="font-family: MathJax_Math-italic;">y<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.002em;"></span></span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.269em; border-left: 0px solid; width: 0px; height: 0.872em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>y</mi></math></span></span><script type="math/tex" id="MathJax-Element-13">y</script> (observed) in the latter expression.</p>
+
+<h3 id="error-sse-and-mse"><em>Error</em>, <em>SSE</em> and <em>MSE</em></h3>
+
+<p>It is perfectly normal to compute expected values where we already
+have observed values. Comparing the two lets you compute the <em>error</em>,
+which is the <em>difference</em> between observed and expected and is an
+indispensable indication of the accuracy of the method.</p>
+
+<p>Since difference can be negative or positive, the common convention is
+to use the absolute value or square the error so that the number is always
+positive. For a whole series the squared errors are typically summed
+resulting in <em><a href="https://en.wikipedia.org/wiki/Residual_sum_of_squares">Sum of Squared Errors</a> (SSE)</em>.
+Sometimes you may come across _<a href="https://en.wikipedia.org/wiki/Mean_squared_error">Mean Squared Error</a>
+(MSE).</p>
+
+<h2 id="and-now-the-methods-where-the-fun-begins">And Now the Methods (where the fun begins!)</h2>
+
+<p>In the next few examples we are going to be using this tiny series:</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="highlight"><table><tbody><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+</pre></td><td class="code"><pre><code class="python"><span class="line"><span class="n">series</span> <span class="o">=</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span><span class="mi">10</span><span class="p">,</span><span class="mi">12</span><span class="p">,</span><span class="mi">13</span><span class="p">,</span><span class="mi">12</span><span class="p">,</span><span class="mi">10</span><span class="p">,</span><span class="mi">12</span><span class="p">]</span>
+</span></code></pre></td></tr></tbody></table></div></figure></notextile></div>
+
+<p>(Feel free to paste it and any of the following code snippets into your Python
+<a href="https://en.wikipedia.org/wiki/Read%E2%80%93eval%E2%80%93print_loop">repl</a>)</p>
+
+<h3 id="naive-method">Naive Method</h3>
+
+<p>This is the most primitive forecasting method. The premise of the
+<em>naive</em> method is that the expected point is equal to the last
+observed point:</p>
+
+<span class="MathJax_Preview" style="color: inherit; display: none;"></span><div class="MathJax_Display" style="text-align: center;"><span class="MathJax" id="MathJax-Element-14-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot; display=&quot;block&quot;&gt;&lt;msub&gt;&lt;mrow class=&quot;MJX-TeXAtom-ORD&quot;&gt;&lt;mover&gt;&lt;mi&gt;y&lt;/mi&gt;&lt;mo stretchy=&quot;false&quot;&gt;&amp;#x005E;&lt;/mo&gt;&lt;/mover&gt;&lt;/mrow&gt;&lt;mrow class=&quot;MJX-TeXAtom-ORD&quot;&gt;&lt;mi&gt;x&lt;/mi&gt;&lt;mo&gt;+&lt;/mo&gt;&lt;mn&gt;1&lt;/mn&gt;&lt;/mrow&gt;&lt;/msub&gt;&lt;mo&gt;=&lt;/mo&gt;&lt;msub&gt;&lt;mi&gt;y&lt;/mi&gt;&lt;mi&gt;x&lt;/mi&gt;&lt;/msub&gt;&lt;/math&gt;" role="presentation" style="text-align: center; position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-90" style="width: 5.015em; display: inline-block;"><span style="display: inline-block; position: relative; width: 4.313em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.502em, 1004.31em, 2.767em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-91"><span class="msubsup" id="MathJax-Span-92"><span style="display: inline-block; position: relative; width: 1.97em; height: 0px;"><span style="position: absolute; clip: rect(3.141em, 1000.52em, 4.313em, -999.998em); top: -3.98em; left: 0em;"><span class="texatom" id="MathJax-Span-93"><span class="mrow" id="MathJax-Span-94"><span class="munderover" id="MathJax-Span-95"><span style="display: inline-block; position: relative; width: 0.565em; height: 0px;"><span style="position: absolute; clip: rect(3.423em, 1000.52em, 4.313em, -999.998em); top: -3.98em; left: 0.002em;"><span class="mi" id="MathJax-Span-96" style="font-family: MathJax_Math-italic;">y<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.002em;"></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; clip: rect(3.141em, 1000.38em, 3.61em, -999.998em); top: -4.027em; left: 0.096em;"><span class="mo" id="MathJax-Span-97" style="font-family: MathJax_Main;">^</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; top: -3.746em; left: 0.565em;"><span class="texatom" id="MathJax-Span-98"><span class="mrow" id="MathJax-Span-99"><span class="mi" id="MathJax-Span-100" style="font-size: 70.7%; font-family: MathJax_Math-italic;">x</span><span class="mo" id="MathJax-Span-101" style="font-size: 70.7%; font-family: MathJax_Main;">+</span><span class="mn" id="MathJax-Span-102" style="font-size: 70.7%; font-family: MathJax_Main;">1</span></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span><span class="mo" id="MathJax-Span-103" style="font-family: MathJax_Main; padding-left: 0.283em;">=</span><span class="msubsup" id="MathJax-Span-104" style="padding-left: 0.283em;"><span style="display: inline-block; position: relative; width: 0.986em; height: 0px;"><span style="position: absolute; clip: rect(3.423em, 1000.52em, 4.313em, -999.998em); top: -3.98em; left: 0em;"><span class="mi" id="MathJax-Span-105" style="font-family: MathJax_Math-italic;">y<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.002em;"></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; top: -3.839em; left: 0.471em;"><span class="mi" id="MathJax-Span-106" style="font-size: 70.7%; font-family: MathJax_Math-italic;">x</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.378em; border-left: 0px solid; width: 0px; height: 1.307em;"></span></span></nobr><span class="MJX_Assistive_MathML MJX_Assistive_MathML_Block" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><msub><mrow class="MJX-TeXAtom-ORD"><mover><mi>y</mi><mo stretchy="false">^</mo></mover></mrow><mrow class="MJX-TeXAtom-ORD"><mi>x</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>=</mo><msub><mi>y</mi><mi>x</mi></msub></math></span></span></div><script type="math/tex; mode=display" id="MathJax-Element-14">
+\hat{y}_{x+1} = y_x
+</script>
+
+<p>Using this method we would forecast the next point to be 12.</p>
+
+<h3 id="simple-average">Simple Average</h3>
+
+<p>A less primitive method is the <a href="https://en.wikipedia.org/wiki/Arithmetic_mean">arithmetic average</a>
+of all the previously observed data points. We take all the values we
+know, calculate the average and bet that that’s going to be the next value. Of course it won’t be it exactly,
+but it probably will be somewhere in the ballpark, hopefully you can see the reasoning behind this
+simplistic approach.</p>
+
+<span class="MathJax_Preview" style="color: inherit; display: none;"></span><div class="MathJax_Display" style="text-align: center;"><span class="MathJax" id="MathJax-Element-15-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot; display=&quot;block&quot;&gt;&lt;msub&gt;&lt;mrow class=&quot;MJX-TeXAtom-ORD&quot;&gt;&lt;mover&gt;&lt;mi&gt;y&lt;/mi&gt;&lt;mo stretchy=&quot;false&quot;&gt;&amp;#x005E;&lt;/mo&gt;&lt;/mover&gt;&lt;/mrow&gt;&lt;mrow class=&quot;MJX-TeXAtom-ORD&quot;&gt;&lt;mi&gt;x&lt;/mi&gt;&lt;mo&gt;+&lt;/mo&gt;&lt;mn&gt;1&lt;/mn&gt;&lt;/mrow&gt;&lt;/msub&gt;&lt;mo&gt;=&lt;/mo&gt;&lt;mstyle displaystyle=&quot;true&quot; scriptlevel=&quot;0&quot;&gt;&lt;mfrac&gt;&lt;mn&gt;1&lt;/mn&gt;&lt;mi&gt;x&lt;/mi&gt;&lt;/mfrac&gt;&lt;/mstyle&gt;&lt;munderover&gt;&lt;mo&gt;&amp;#x2211;&lt;/mo&gt;&lt;mrow class=&quot;MJX-TeXAtom-ORD&quot;&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;mo&gt;=&lt;/mo&gt;&lt;mn&gt;1&lt;/mn&gt;&lt;/mrow&gt;&lt;mrow class=&quot;MJX-TeXAtom-ORD&quot;&gt;&lt;mi&gt;x&lt;/mi&gt;&lt;/mrow&gt;&lt;/munderover&gt;&lt;msub&gt;&lt;mi&gt;y&lt;/mi&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;/msub&gt;&lt;/math&gt;" role="presentation" style="text-align: center; position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-107" style="width: 8.061em; display: inline-block;"><span style="display: inline-block; position: relative; width: 6.936em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(0.658em, 1006.94em, 3.704em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-108"><span class="msubsup" id="MathJax-Span-109"><span style="display: inline-block; position: relative; width: 1.97em; height: 0px;"><span style="position: absolute; clip: rect(3.141em, 1000.52em, 4.313em, -999.998em); top: -3.98em; left: 0em;"><span class="texatom" id="MathJax-Span-110"><span class="mrow" id="MathJax-Span-111"><span class="munderover" id="MathJax-Span-112"><span style="display: inline-block; position: relative; width: 0.565em; height: 0px;"><span style="position: absolute; clip: rect(3.423em, 1000.52em, 4.313em, -999.998em); top: -3.98em; left: 0.002em;"><span class="mi" id="MathJax-Span-113" style="font-family: MathJax_Math-italic;">y<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.002em;"></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; clip: rect(3.141em, 1000.38em, 3.61em, -999.998em); top: -4.027em; left: 0.096em;"><span class="mo" id="MathJax-Span-114" style="font-family: MathJax_Main;">^</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; top: -3.746em; left: 0.565em;"><span class="texatom" id="MathJax-Span-115"><span class="mrow" id="MathJax-Span-116"><span class="mi" id="MathJax-Span-117" style="font-size: 70.7%; font-family: MathJax_Math-italic;">x</span><span class="mo" id="MathJax-Span-118" style="font-size: 70.7%; font-family: MathJax_Main;">+</span><span class="mn" id="MathJax-Span-119" style="font-size: 70.7%; font-family: MathJax_Main;">1</span></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span><span class="mo" id="MathJax-Span-120" style="font-family: MathJax_Main; padding-left: 0.283em;">=</span><span class="mstyle" id="MathJax-Span-121" style="padding-left: 0.283em;"><span class="mrow" id="MathJax-Span-122"><span class="mfrac" id="MathJax-Span-123"><span style="display: inline-block; position: relative; width: 0.705em; height: 0px; margin-right: 0.143em; margin-left: 0.143em;"><span style="position: absolute; clip: rect(3.188em, 1000.42em, 4.125em, -999.998em); top: -4.636em; left: 50%; margin-left: -0.232em;"><span class="mn" id="MathJax-Span-124" style="font-family: MathJax_Main;">1</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; clip: rect(3.423em, 1000.52em, 4.125em, -999.998em); top: -3.277em; left: 50%; margin-left: -0.279em;"><span class="mi" id="MathJax-Span-125" style="font-family: MathJax_Math-italic;">x</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; clip: rect(0.893em, 1000.71em, 1.22em, -999.998em); top: -1.31em; left: 0em;"><span style="display: inline-block; overflow: hidden; vertical-align: 0em; border-top: 1.3px solid; width: 0.705em; height: 0px;"></span><span style="display: inline-block; width: 0px; height: 1.08em;"></span></span></span></span></span></span><span class="munderover" id="MathJax-Span-126" style="padding-left: 0.19em;"><span style="display: inline-block; position: relative; width: 1.455em; height: 0px;"><span style="position: absolute; clip: rect(2.907em, 1001.41em, 4.594em, -999.998em); top: -3.98em; left: 0em;"><span class="mo" id="MathJax-Span-127" style="font-family: MathJax_Size2; vertical-align: 0em;">∑</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; clip: rect(3.376em, 1001.08em, 4.219em, -999.998em); top: -2.902em; left: 0.143em;"><span class="texatom" id="MathJax-Span-128"><span class="mrow" id="MathJax-Span-129"><span class="mi" id="MathJax-Span-130" style="font-size: 70.7%; font-family: MathJax_Math-italic;">i</span><span class="mo" id="MathJax-Span-131" style="font-size: 70.7%; font-family: MathJax_Main;">=</span><span class="mn" id="MathJax-Span-132" style="font-size: 70.7%; font-family: MathJax_Main;">1</span></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; clip: rect(3.423em, 1000.38em, 4.125em, -999.998em); top: -5.151em; left: 0.518em;"><span class="texatom" id="MathJax-Span-133"><span class="mrow" id="MathJax-Span-134"><span class="mi" id="MathJax-Span-135" style="font-size: 70.7%; font-family: MathJax_Math-italic;">x</span></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span><span class="msubsup" id="MathJax-Span-136" style="padding-left: 0.19em;"><span style="display: inline-block; position: relative; width: 0.799em; height: 0px;"><span style="position: absolute; clip: rect(3.423em, 1000.52em, 4.313em, -999.998em); top: -3.98em; left: 0em;"><span class="mi" id="MathJax-Span-137" style="font-family: MathJax_Math-italic;">y<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.002em;"></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; top: -3.839em; left: 0.471em;"><span class="mi" id="MathJax-Span-138" style="font-size: 70.7%; font-family: MathJax_Math-italic;">i</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -1.465em; border-left: 0px solid; width: 0px; height: 3.318em;"></span></span></nobr><span class="MJX_Assistive_MathML MJX_Assistive_MathML_Block" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><msub><mrow class="MJX-TeXAtom-ORD"><mover><mi>y</mi><mo stretchy="false">^</mo></mover></mrow><mrow class="MJX-TeXAtom-ORD"><mi>x</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>=</mo><mstyle displaystyle="true" scriptlevel="0"><mfrac><mn>1</mn><mi>x</mi></mfrac></mstyle><munderover><mo>∑</mo><mrow class="MJX-TeXAtom-ORD"><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mrow class="MJX-TeXAtom-ORD"><mi>x</mi></mrow></munderover><msub><mi>y</mi><mi>i</mi></msub></math></span></span></div><script type="math/tex; mode=display" id="MathJax-Element-15">
+\hat{y}_{x+1} = \dfrac{1}{x}\sum_{i=1}^{x}y_i
+</script>
+
+<p>(Okay, this formula is only here because I think the <a href="https://en.wikipedia.org/wiki/Summation">capital Sigma</a>
+looks cool. I am sincerely hoping that the average requires no explanation.) In Python:</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="highlight"><table><tbody><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+</pre></td><td class="code"><pre><code class="python"><span class="line"><span class="k">def</span> <span class="nf">average</span><span class="p">(</span><span class="n">series</span><span class="p">):</span>
+</span><span class="line">    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">series</span><span class="p">))</span><span class="o">/</span><span class="nb">len</span><span class="p">(</span><span class="n">series</span><span class="p">)</span>
+</span><span class="line">
+</span><span class="line"><span class="c"># Given the above series, the average is:</span>
+</span><span class="line"><span class="c"># &gt;&gt;&gt; average(series)</span>
+</span><span class="line"><span class="c"># 10.285714285714286</span>
+</span></code></pre></td></tr></tbody></table></div></figure></notextile></div>
+
+<p>As a forecasting method, there are actually situations where it’s spot
+on. For example your final school grade may be the average of all the
+previous grades.</p>
+
+<h3 id="moving-average">Moving Average</h3>
+
+<p>An improvement over simple average is the average of <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-16-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;n&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-139" style="width: 0.705em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.611em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.783em, 1000.61em, 2.485em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-140"><span class="mi" id="MathJax-Span-141" style="font-family: MathJax_Math-italic;">n</span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.052em; border-left: 0px solid; width: 0px; height: 0.655em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>n</mi></math></span></span><script type="math/tex" id="MathJax-Element-16">n</script> last
+points. Obviously the thinking here is that only the recent values
+matter. Calculation of the moving average involves what is sometimes
+called a “sliding window” of size <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-17-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;n&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-142" style="width: 0.705em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.611em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.783em, 1000.61em, 2.485em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-143"><span class="mi" id="MathJax-Span-144" style="font-family: MathJax_Math-italic;">n</span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.052em; border-left: 0px solid; width: 0px; height: 0.655em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>n</mi></math></span></span><script type="math/tex" id="MathJax-Element-17">n</script>:</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="highlight"><table><tbody><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+</pre></td><td class="code"><pre><code class="python"><span class="line"><span class="c"># moving average using n last points</span>
+</span><span class="line"><span class="k">def</span> <span class="nf">moving_average</span><span class="p">(</span><span class="n">series</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+</span><span class="line">    <span class="k">return</span> <span class="n">average</span><span class="p">(</span><span class="n">series</span><span class="p">[</span><span class="o">-</span><span class="n">n</span><span class="p">:])</span>
+</span><span class="line">
+</span><span class="line"><span class="c"># &gt;&gt;&gt; moving_average(series, 3)</span>
+</span><span class="line"><span class="c"># 11.333333333333334</span>
+</span><span class="line"><span class="c"># &gt;&gt;&gt; moving_average(series, 4)</span>
+</span><span class="line"><span class="c"># 11.75</span>
+</span></code></pre></td></tr></tbody></table></div></figure></notextile></div>
+
+<p>A moving average can actually be quite effective, especially if you
+pick the right <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-18-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;n&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-145" style="width: 0.705em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.611em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.783em, 1000.61em, 2.485em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-146"><span class="mi" id="MathJax-Span-147" style="font-family: MathJax_Math-italic;">n</span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.052em; border-left: 0px solid; width: 0px; height: 0.655em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>n</mi></math></span></span><script type="math/tex" id="MathJax-Element-18">n</script> for the series. Stock analysts adore it.</p>
+
+<p>Also note that simple average is a variation of a moving average, thus
+the two functions above could be re-written as a single recursive one
+(just for fun):</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="highlight"><table><tbody><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+</pre></td><td class="code"><pre><code class="python"><span class="line"><span class="k">def</span> <span class="nf">average</span><span class="p">(</span><span class="n">series</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+</span><span class="line">    <span class="k">if</span> <span class="n">n</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+</span><span class="line">        <span class="k">return</span> <span class="n">average</span><span class="p">(</span><span class="n">series</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">series</span><span class="p">))</span>
+</span><span class="line">    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">series</span><span class="p">[</span><span class="o">-</span><span class="n">n</span><span class="p">:]))</span><span class="o">/</span><span class="n">n</span>
+</span><span class="line">
+</span><span class="line"><span class="c"># &gt;&gt;&gt; average(series, 3)</span>
+</span><span class="line"><span class="c"># 11.333333333333334</span>
+</span><span class="line"><span class="c"># &gt;&gt;&gt; average(series)</span>
+</span><span class="line"><span class="c"># 10.285714285714286</span>
+</span></code></pre></td></tr></tbody></table></div></figure></notextile></div>
+
+<h3 id="weighted-moving-average">Weighted Moving Average</h3>
+
+<p>A <em>weighted</em> moving average is a moving average where within the
+sliding window values are given different weights, typically so that
+more recent points matter more.</p>
+
+<p>Instead of selecting a window size, it requires a list of weights
+(which should add up to 1). For example if we picked <code>[0.1,
+0.2, 0.3, 0.4]</code> as weights, we would be giving 10%, 20%, 30% and 40%
+to the last 4 points respectively. In Python:</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="highlight"><table><tbody><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+</pre></td><td class="code"><pre><code class="python"><span class="line"><span class="c"># weighted average, weights is a list of weights</span>
+</span><span class="line"><span class="k">def</span> <span class="nf">weighted_average</span><span class="p">(</span><span class="n">series</span><span class="p">,</span> <span class="n">weights</span><span class="p">):</span>
+</span><span class="line">    <span class="n">result</span> <span class="o">=</span> <span class="mf">0.0</span>
+</span><span class="line">    <span class="n">weights</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span>
+</span><span class="line">    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">weights</span><span class="p">)):</span>
+</span><span class="line">        <span class="n">result</span> <span class="o">+=</span> <span class="n">series</span><span class="p">[</span><span class="o">-</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">weights</span><span class="p">[</span><span class="n">n</span><span class="p">]</span>
+</span><span class="line">    <span class="k">return</span> <span class="n">result</span>
+</span><span class="line">
+</span><span class="line"><span class="c"># &gt;&gt;&gt; weights = [0.1, 0.2, 0.3, 0.4]</span>
+</span><span class="line"><span class="c"># &gt;&gt;&gt; weighted_average(series, weights)</span>
+</span><span class="line"><span class="c"># 11.5</span>
+</span></code></pre></td></tr></tbody></table></div></figure></notextile></div>
+
+<p>Weighted moving average is fundamental to what follows, please take a
+moment to understand it, give it a think before reading on.</p>
+
+<p>I would also like to stress the importance of the weights adding up
+to 1. To demonstrate why, let’s say we pick weights <code>[0.9, 0.8, 0.7,
+0.6]</code> (which add up to 3.0). Watch what happens:</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tbody><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+</pre></td><td class="code"><pre><code class=""><span class="line">&gt;&gt;&gt; weighted_average(series, [0.9, 0.8, 0.7, 0.6])
+</span><span class="line">&gt;&gt;&gt; 35.5  # &lt;--- this is clearly bogus</span></code></pre></td></tr></tbody></table></div></figure></notextile></div>
+
+<h3 id="picture-time">Picture time!</h3>
+
+<p>Here is a picture that demonstrates our tiny series and all of the above
+forecasts (except for naive).</p>
+
+<p><img src="./Holt-Winters Forecasting for Dummies (or Developers) - Part I - Gregory Trubetskoy_files/hw01.png"></p>
+
+<p>It’s important to understand that which of the above methods is better
+very much depends on the nature of the series. The order in which I
+presented them was from simple to complex, but “more complex” doesn’t
+necessarily mean “better”.</p>
+
+<h3 id="single-exponential-smoothing">Single Exponential Smoothing</h3>
+
+<p>Here is where things get interesting. Imagine a weighted average where
+we consider <em>all</em> of the data points, while assigning exponentially
+smaller weights as we go back in time. For example if we started with
+0.9, our weights would be (going back in time):</p>
+
+<span class="MathJax_Preview" style="color: inherit; display: none;"></span><div class="MathJax_Display"><span class="MathJax MathJax_FullWidth" id="MathJax-Element-19-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot; display=&quot;block&quot;&gt;&lt;msup&gt;&lt;mn&gt;0.9&lt;/mn&gt;&lt;mn&gt;1&lt;/mn&gt;&lt;/msup&gt;&lt;mo&gt;,&lt;/mo&gt;&lt;msup&gt;&lt;mn&gt;0.9&lt;/mn&gt;&lt;mn&gt;2&lt;/mn&gt;&lt;/msup&gt;&lt;mo&gt;,&lt;/mo&gt;&lt;msup&gt;&lt;mn&gt;0.9&lt;/mn&gt;&lt;mn&gt;3&lt;/mn&gt;&lt;/msup&gt;&lt;mo&gt;,&lt;/mo&gt;&lt;msup&gt;&lt;mn&gt;0.9&lt;/mn&gt;&lt;mn&gt;4&lt;/mn&gt;&lt;/msup&gt;&lt;mo&gt;,&lt;/mo&gt;&lt;msup&gt;&lt;mn&gt;0.9&lt;/mn&gt;&lt;mn&gt;5&lt;/mn&gt;&lt;/msup&gt;&lt;mo&gt;,&lt;/mo&gt;&lt;msup&gt;&lt;mn&gt;0.9&lt;/mn&gt;&lt;mn&gt;6&lt;/mn&gt;&lt;/msup&gt;&lt;mo&gt;.&lt;/mo&gt;&lt;mo&gt;.&lt;/mo&gt;&lt;mo&gt;.&lt;/mo&gt;&lt;mspace linebreak=&quot;newline&quot; /&gt;&lt;mstyle displaystyle=&quot;false&quot; scriptlevel=&quot;0&quot;&gt;&lt;mtext&gt;or:&amp;#xA0;&lt;/mtext&gt;&lt;/mstyle&gt;&lt;mn&gt;0.9&lt;/mn&gt;&lt;mo&gt;,&lt;/mo&gt;&lt;mn&gt;0.81&lt;/mn&gt;&lt;mo&gt;,&lt;/mo&gt;&lt;mn&gt;0.729&lt;/mn&gt;&lt;mo&gt;,&lt;/mo&gt;&lt;mn&gt;0.6561&lt;/mn&gt;&lt;mo&gt;,&lt;/mo&gt;&lt;mn&gt;0.59049&lt;/mn&gt;&lt;mo&gt;,&lt;/mo&gt;&lt;mn&gt;0.531441&lt;/mn&gt;&lt;mo&gt;,&lt;/mo&gt;&lt;mo&gt;.&lt;/mo&gt;&lt;mo&gt;.&lt;/mo&gt;&lt;mo&gt;.&lt;/mo&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-148" style="width: 100%; display: inline-block; min-width: 23.943em;"><span style="display: inline-block; position: relative; width: 100%; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(2.954em, 1020.52em, 5.625em, -999.998em); top: -3.98em; left: 0em; width: 100%;"><span class="mrow" id="MathJax-Span-149"><span style="display: inline-block; position: relative; width: 100%; height: 0px;"><span style="position: absolute; clip: rect(2.954em, 1013.73em, 4.313em, -999.998em); top: -3.98em; left: 50%; margin-left: -6.885em;"><span class="msubsup" id="MathJax-Span-150"><span style="display: inline-block; position: relative; width: 1.689em; height: 0px;"><span style="position: absolute; clip: rect(3.188em, 1001.22em, 4.125em, -999.998em); top: -3.98em; left: 0em;"><span class="mn" id="MathJax-Span-151" style="font-family: MathJax_Main;">0.9</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; top: -4.402em; left: 1.267em;"><span class="mn" id="MathJax-Span-152" style="font-size: 70.7%; font-family: MathJax_Main;">1</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span><span class="mo" id="MathJax-Span-153" style="font-family: MathJax_Main;">,</span><span class="msubsup" id="MathJax-Span-154" style="padding-left: 0.19em;"><span style="display: inline-block; position: relative; width: 1.689em; height: 0px;"><span style="position: absolute; clip: rect(3.188em, 1001.22em, 4.125em, -999.998em); top: -3.98em; left: 0em;"><span class="mn" id="MathJax-Span-155" style="font-family: MathJax_Main;">0.9</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; top: -4.402em; left: 1.267em;"><span class="mn" id="MathJax-Span-156" style="font-size: 70.7%; font-family: MathJax_Main;">2</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span><span class="mo" id="MathJax-Span-157" style="font-family: MathJax_Main;">,</span><span class="msubsup" id="MathJax-Span-158" style="padding-left: 0.19em;"><span style="display: inline-block; position: relative; width: 1.689em; height: 0px;"><span style="position: absolute; clip: rect(3.188em, 1001.22em, 4.125em, -999.998em); top: -3.98em; left: 0em;"><span class="mn" id="MathJax-Span-159" style="font-family: MathJax_Main;">0.9</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; top: -4.402em; left: 1.267em;"><span class="mn" id="MathJax-Span-160" style="font-size: 70.7%; font-family: MathJax_Main;">3</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span><span class="mo" id="MathJax-Span-161" style="font-family: MathJax_Main;">,</span><span class="msubsup" id="MathJax-Span-162" style="padding-left: 0.19em;"><span style="display: inline-block; position: relative; width: 1.689em; height: 0px;"><span style="position: absolute; clip: rect(3.188em, 1001.22em, 4.125em, -999.998em); top: -3.98em; left: 0em;"><span class="mn" id="MathJax-Span-163" style="font-family: MathJax_Main;">0.9</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; top: -4.402em; left: 1.267em;"><span class="mn" id="MathJax-Span-164" style="font-size: 70.7%; font-family: MathJax_Main;">4</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span><span class="mo" id="MathJax-Span-165" style="font-family: MathJax_Main;">,</span><span class="msubsup" id="MathJax-Span-166" style="padding-left: 0.19em;"><span style="display: inline-block; position: relative; width: 1.689em; height: 0px;"><span style="position: absolute; clip: rect(3.188em, 1001.22em, 4.125em, -999.998em); top: -3.98em; left: 0em;"><span class="mn" id="MathJax-Span-167" style="font-family: MathJax_Main;">0.9</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; top: -4.402em; left: 1.267em;"><span class="mn" id="MathJax-Span-168" style="font-size: 70.7%; font-family: MathJax_Main;">5</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span><span class="mo" id="MathJax-Span-169" style="font-family: MathJax_Main;">,</span><span class="msubsup" id="MathJax-Span-170" style="padding-left: 0.19em;"><span style="display: inline-block; position: relative; width: 1.689em; height: 0px;"><span style="position: absolute; clip: rect(3.188em, 1001.22em, 4.125em, -999.998em); top: -3.98em; left: 0em;"><span class="mn" id="MathJax-Span-171" style="font-family: MathJax_Main;">0.9</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; top: -4.402em; left: 1.267em;"><span class="mn" id="MathJax-Span-172" style="font-size: 70.7%; font-family: MathJax_Main;">6</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span><span class="mo" id="MathJax-Span-173" style="font-family: MathJax_Main;">.</span><span class="mo" id="MathJax-Span-174" style="font-family: MathJax_Main; padding-left: 0.19em;">.</span><span class="mo" id="MathJax-Span-175" style="font-family: MathJax_Main; padding-left: 0.19em;">.</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; clip: rect(3.188em, 1020.52em, 4.313em, -999.998em); top: -2.668em; left: 50%; margin-left: -10.305em;"><span class="mspace" id="MathJax-Span-176" style="height: 0em; vertical-align: 0em; width: 0em; display: inline-block; overflow: hidden;"></span><span class="mstyle" id="MathJax-Span-177" style=""><span class="mrow" id="MathJax-Span-178"><span class="mtext" id="MathJax-Span-179" style="font-family: MathJax_Main;">or:&nbsp;</span></span></span><span class="mn" id="MathJax-Span-180" style="font-family: MathJax_Main;">0.9</span><span class="mo" id="MathJax-Span-181" style="font-family: MathJax_Main;">,</span><span class="mn" id="MathJax-Span-182" style="font-family: MathJax_Main; padding-left: 0.19em;">0.81</span><span class="mo" id="MathJax-Span-183" style="font-family: MathJax_Main;">,</span><span class="mn" id="MathJax-Span-184" style="font-family: MathJax_Main; padding-left: 0.19em;">0.729</span><span class="mo" id="MathJax-Span-185" style="font-family: MathJax_Main;">,</span><span class="mn" id="MathJax-Span-186" style="font-family: MathJax_Main; padding-left: 0.19em;">0.6561</span><span class="mo" id="MathJax-Span-187" style="font-family: MathJax_Main;">,</span><span class="mn" id="MathJax-Span-188" style="font-family: MathJax_Main; padding-left: 0.19em;">0.59049</span><span class="mo" id="MathJax-Span-189" style="font-family: MathJax_Main;">,</span><span class="mn" id="MathJax-Span-190" style="font-family: MathJax_Main; padding-left: 0.19em;">0.531441</span><span class="mo" id="MathJax-Span-191" style="font-family: MathJax_Main;">,</span><span class="mo" id="MathJax-Span-192" style="font-family: MathJax_Main; padding-left: 0.19em;">.</span><span class="mo" id="MathJax-Span-193" style="font-family: MathJax_Main; padding-left: 0.19em;">.</span><span class="mo" id="MathJax-Span-194" style="font-family: MathJax_Main; padding-left: 0.19em;">.</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -1.791em; border-left: 0px solid; width: 0px; height: 2.883em;"></span></span></nobr><span class="MJX_Assistive_MathML MJX_Assistive_MathML_Block" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><msup><mn>0.9</mn><mn>1</mn></msup><mo>,</mo><msup><mn>0.9</mn><mn>2</mn></msup><mo>,</mo><msup><mn>0.9</mn><mn>3</mn></msup><mo>,</mo><msup><mn>0.9</mn><mn>4</mn></msup><mo>,</mo><msup><mn>0.9</mn><mn>5</mn></msup><mo>,</mo><msup><mn>0.9</mn><mn>6</mn></msup><mo>.</mo><mo>.</mo><mo>.</mo><mspace linebreak="newline"></mspace><mstyle displaystyle="false" scriptlevel="0"><mtext>or:&nbsp;</mtext></mstyle><mn>0.9</mn><mo>,</mo><mn>0.81</mn><mo>,</mo><mn>0.729</mn><mo>,</mo><mn>0.6561</mn><mo>,</mo><mn>0.59049</mn><mo>,</mo><mn>0.531441</mn><mo>,</mo><mo>.</mo><mo>.</mo><mo>.</mo></math></span></span></div><script type="math/tex; mode=display" id="MathJax-Element-19">
+0.9^1, 0.9^2, 0.9^3, 0.9^4, 0.9^5, 0.9^6... \\
+\mbox{or: } 0.9, 0.81, 0.729, 0.6561, 0.59049, 0.531441, ...
+</script>
+
+<p>…eventually approaching the big old zero. In some way this is very
+similar to the weighted average above, only the weights are dictated
+by math, decaying uniformly. The smaller the starting weight, the
+faster it approaches zero.</p>
+
+<p>Only… there is a problem: weights do not add up to 1. The sum of
+the first 3 numbers alone is already 2.439! (Exercise for the reader: what number
+does the sum of the weights approach and why?)</p>
+
+<p>What earned Poisson, Holts or Roberts a permanent place in the history
+of Mathematics is solving this with a succinct and elegant formula:</p>
+
+<span class="MathJax_Preview" style="color: inherit; display: none;"></span><div class="MathJax_Display"><span class="MathJax MathJax_FullWidth" id="MathJax-Element-20-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot; display=&quot;block&quot;&gt;&lt;msub&gt;&lt;mrow class=&quot;MJX-TeXAtom-ORD&quot;&gt;&lt;mover&gt;&lt;mi&gt;y&lt;/mi&gt;&lt;mo stretchy=&quot;false&quot;&gt;&amp;#x005E;&lt;/mo&gt;&lt;/mover&gt;&lt;/mrow&gt;&lt;mi&gt;x&lt;/mi&gt;&lt;/msub&gt;&lt;mo&gt;=&lt;/mo&gt;&lt;mi&gt;&amp;#x03B1;&lt;/mi&gt;&lt;mo&gt;&amp;#x22C5;&lt;/mo&gt;&lt;msub&gt;&lt;mi&gt;y&lt;/mi&gt;&lt;mi&gt;x&lt;/mi&gt;&lt;/msub&gt;&lt;mo&gt;+&lt;/mo&gt;&lt;mo stretchy=&quot;false&quot;&gt;(&lt;/mo&gt;&lt;mn&gt;1&lt;/mn&gt;&lt;mo&gt;&amp;#x2212;&lt;/mo&gt;&lt;mi&gt;&amp;#x03B1;&lt;/mi&gt;&lt;mo stretchy=&quot;false&quot;&gt;)&lt;/mo&gt;&lt;mo&gt;&amp;#x22C5;&lt;/mo&gt;&lt;msub&gt;&lt;mrow class=&quot;MJX-TeXAtom-ORD&quot;&gt;&lt;mover&gt;&lt;mi&gt;y&lt;/mi&gt;&lt;mo stretchy=&quot;false&quot;&gt;&amp;#x005E;&lt;/mo&gt;&lt;/mover&gt;&lt;/mrow&gt;&lt;mrow class=&quot;MJX-TeXAtom-ORD&quot;&gt;&lt;mi&gt;x&lt;/mi&gt;&lt;mo&gt;&amp;#x2212;&lt;/mo&gt;&lt;mn&gt;1&lt;/mn&gt;&lt;/mrow&gt;&lt;/msub&gt;&lt;mspace linebreak=&quot;newline&quot; /&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-195" style="width: 100%; display: inline-block; min-width: 13.824em;"><span style="display: inline-block; position: relative; width: 100%; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(3.095em, 1011.9em, 5.343em, -999.998em); top: -3.98em; left: 0em; width: 100%;"><span class="mrow" id="MathJax-Span-196"><span style="display: inline-block; position: relative; width: 100%; height: 0px;"><span style="position: absolute; clip: rect(3.095em, 1011.9em, 4.406em, -999.998em); top: -3.98em; left: 50%; margin-left: -5.948em;"><span class="msubsup" id="MathJax-Span-197"><span style="display: inline-block; position: relative; width: 1.08em; height: 0px;"><span style="position: absolute; clip: rect(3.141em, 1000.52em, 4.313em, -999.998em); top: -3.98em; left: 0em;"><span class="texatom" id="MathJax-Span-198"><span class="mrow" id="MathJax-Span-199"><span class="munderover" id="MathJax-Span-200"><span style="display: inline-block; position: relative; width: 0.565em; height: 0px;"><span style="position: absolute; clip: rect(3.423em, 1000.52em, 4.313em, -999.998em); top: -3.98em; left: 0.002em;"><span class="mi" id="MathJax-Span-201" style="font-family: MathJax_Math-italic;">y<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.002em;"></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; clip: rect(3.141em, 1000.38em, 3.61em, -999.998em); top: -4.027em; left: 0.096em;"><span class="mo" id="MathJax-Span-202" style="font-family: MathJax_Main;">^</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; top: -3.746em; left: 0.565em;"><span class="mi" id="MathJax-Span-203" style="font-size: 70.7%; font-family: MathJax_Math-italic;">x</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span><span class="mo" id="MathJax-Span-204" style="font-family: MathJax_Main; padding-left: 0.283em;">=</span><span class="mi" id="MathJax-Span-205" style="font-family: MathJax_Math-italic; padding-left: 0.283em;">α</span><span class="mo" id="MathJax-Span-206" style="font-family: MathJax_Main; padding-left: 0.237em;">⋅</span><span class="msubsup" id="MathJax-Span-207" style="padding-left: 0.237em;"><span style="display: inline-block; position: relative; width: 0.986em; height: 0px;"><span style="position: absolute; clip: rect(3.423em, 1000.52em, 4.313em, -999.998em); top: -3.98em; left: 0em;"><span class="mi" id="MathJax-Span-208" style="font-family: MathJax_Math-italic;">y<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.002em;"></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; top: -3.839em; left: 0.471em;"><span class="mi" id="MathJax-Span-209" style="font-size: 70.7%; font-family: MathJax_Math-italic;">x</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span><span class="mo" id="MathJax-Span-210" style="font-family: MathJax_Main; padding-left: 0.237em;">+</span><span class="mo" id="MathJax-Span-211" style="font-family: MathJax_Main; padding-left: 0.237em;">(</span><span class="mn" id="MathJax-Span-212" style="font-family: MathJax_Main;">1</span><span class="mo" id="MathJax-Span-213" style="font-family: MathJax_Main; padding-left: 0.237em;">−</span><span class="mi" id="MathJax-Span-214" style="font-family: MathJax_Math-italic; padding-left: 0.237em;">α</span><span class="mo" id="MathJax-Span-215" style="font-family: MathJax_Main;">)</span><span class="mo" id="MathJax-Span-216" style="font-family: MathJax_Main; padding-left: 0.237em;">⋅</span><span class="msubsup" id="MathJax-Span-217" style="padding-left: 0.237em;"><span style="display: inline-block; position: relative; width: 1.97em; height: 0px;"><span style="position: absolute; clip: rect(3.141em, 1000.52em, 4.313em, -999.998em); top: -3.98em; left: 0em;"><span class="texatom" id="MathJax-Span-218"><span class="mrow" id="MathJax-Span-219"><span class="munderover" id="MathJax-Span-220"><span style="display: inline-block; position: relative; width: 0.565em; height: 0px;"><span style="position: absolute; clip: rect(3.423em, 1000.52em, 4.313em, -999.998em); top: -3.98em; left: 0.002em;"><span class="mi" id="MathJax-Span-221" style="font-family: MathJax_Math-italic;">y<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.002em;"></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; clip: rect(3.141em, 1000.38em, 3.61em, -999.998em); top: -4.027em; left: 0.096em;"><span class="mo" id="MathJax-Span-222" style="font-family: MathJax_Main;">^</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; top: -3.746em; left: 0.565em;"><span class="texatom" id="MathJax-Span-223"><span class="mrow" id="MathJax-Span-224"><span class="mi" id="MathJax-Span-225" style="font-size: 70.7%; font-family: MathJax_Math-italic;">x</span><span class="mo" id="MathJax-Span-226" style="font-size: 70.7%; font-family: MathJax_Main;">−</span><span class="mn" id="MathJax-Span-227" style="font-size: 70.7%; font-family: MathJax_Main;">1</span></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; clip: rect(3.844em, 1000em, 4.125em, -999.998em); top: -2.762em; left: 50%; margin-left: 0em;"><span class="mspace" id="MathJax-Span-228" style="height: 0em; vertical-align: 0em; width: 0em; display: inline-block; overflow: hidden;"></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -1.465em; border-left: 0px solid; width: 0px; height: 2.394em;"></span></span></nobr><span class="MJX_Assistive_MathML MJX_Assistive_MathML_Block" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><msub><mrow class="MJX-TeXAtom-ORD"><mover><mi>y</mi><mo stretchy="false">^</mo></mover></mrow><mi>x</mi></msub><mo>=</mo><mi>α</mi><mo>⋅</mo><msub><mi>y</mi><mi>x</mi></msub><mo>+</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mi>α</mi><mo stretchy="false">)</mo><mo>⋅</mo><msub><mrow class="MJX-TeXAtom-ORD"><mover><mi>y</mi><mo stretchy="false">^</mo></mover></mrow><mrow class="MJX-TeXAtom-ORD"><mi>x</mi><mo>−</mo><mn>1</mn></mrow></msub><mspace linebreak="newline"></mspace></math></span></span></div><script type="math/tex; mode=display" id="MathJax-Element-20">
+\hat{y}_x = \alpha \cdot y_x + (1-\alpha) \cdot \hat{y}_{x-1} \\
+</script>
+
+<p>If you stare at it just long enough, you will see that the expected
+value <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-21-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;msub&gt;&lt;mrow class=&quot;MJX-TeXAtom-ORD&quot;&gt;&lt;mover&gt;&lt;mi&gt;y&lt;/mi&gt;&lt;mo stretchy=&quot;false&quot;&gt;&amp;#x005E;&lt;/mo&gt;&lt;/mover&gt;&lt;/mrow&gt;&lt;mi&gt;x&lt;/mi&gt;&lt;/msub&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-229" style="width: 1.267em; display: inline-block;"><span style="display: inline-block; position: relative; width: 1.08em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.502em, 1001.08em, 2.72em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-230"><span class="msubsup" id="MathJax-Span-231"><span style="display: inline-block; position: relative; width: 1.08em; height: 0px;"><span style="position: absolute; clip: rect(3.141em, 1000.52em, 4.313em, -999.998em); top: -3.98em; left: 0em;"><span class="texatom" id="MathJax-Span-232"><span class="mrow" id="MathJax-Span-233"><span class="munderover" id="MathJax-Span-234"><span style="display: inline-block; position: relative; width: 0.565em; height: 0px;"><span style="position: absolute; clip: rect(3.423em, 1000.52em, 4.313em, -999.998em); top: -3.98em; left: 0.002em;"><span class="mi" id="MathJax-Span-235" style="font-family: MathJax_Math-italic;">y<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.002em;"></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; clip: rect(3.141em, 1000.38em, 3.61em, -999.998em); top: -4.027em; left: 0.096em;"><span class="mo" id="MathJax-Span-236" style="font-family: MathJax_Main;">^</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; top: -3.746em; left: 0.565em;"><span class="mi" id="MathJax-Span-237" style="font-size: 70.7%; font-family: MathJax_Math-italic;">x</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.323em; border-left: 0px solid; width: 0px; height: 1.253em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><msub><mrow class="MJX-TeXAtom-ORD"><mover><mi>y</mi><mo stretchy="false">^</mo></mover></mrow><mi>x</mi></msub></math></span></span><script type="math/tex" id="MathJax-Element-21">\hat{y}_x</script> is the sum of two products: <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-22-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;&amp;#x03B1;&lt;/mi&gt;&lt;mo&gt;&amp;#x22C5;&lt;/mo&gt;&lt;msub&gt;&lt;mi&gt;y&lt;/mi&gt;&lt;mi&gt;x&lt;/mi&gt;&lt;/msub&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-238" style="width: 2.767em; display: inline-block;"><span style="display: inline-block; position: relative; width: 2.392em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.783em, 1002.39em, 2.673em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-239"><span class="mi" id="MathJax-Span-240" style="font-family: MathJax_Math-italic;">α</span><span class="mo" id="MathJax-Span-241" style="font-family: MathJax_Main; padding-left: 0.237em;">⋅</span><span class="msubsup" id="MathJax-Span-242" style="padding-left: 0.237em;"><span style="display: inline-block; position: relative; width: 0.986em; height: 0px;"><span style="position: absolute; clip: rect(3.423em, 1000.52em, 4.313em, -999.998em); top: -3.98em; left: 0em;"><span class="mi" id="MathJax-Span-243" style="font-family: MathJax_Math-italic;">y<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.002em;"></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; top: -3.839em; left: 0.471em;"><span class="mi" id="MathJax-Span-244" style="font-size: 70.7%; font-family: MathJax_Math-italic;">x</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.269em; border-left: 0px solid; width: 0px; height: 0.872em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>α</mi><mo>⋅</mo><msub><mi>y</mi><mi>x</mi></msub></math></span></span><script type="math/tex" id="MathJax-Element-22">\alpha \cdot y_x</script> and
+<span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-23-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mo stretchy=&quot;false&quot;&gt;(&lt;/mo&gt;&lt;mn&gt;1&lt;/mn&gt;&lt;mo&gt;&amp;#x2212;&lt;/mo&gt;&lt;mi&gt;&amp;#x03B1;&lt;/mi&gt;&lt;mo stretchy=&quot;false&quot;&gt;)&lt;/mo&gt;&lt;mo&gt;&amp;#x22C5;&lt;/mo&gt;&lt;msub&gt;&lt;mrow class=&quot;MJX-TeXAtom-ORD&quot;&gt;&lt;mover&gt;&lt;mi&gt;y&lt;/mi&gt;&lt;mo stretchy=&quot;false&quot;&gt;&amp;#x005E;&lt;/mo&gt;&lt;/mover&gt;&lt;/mrow&gt;&lt;mrow class=&quot;MJX-TeXAtom-ORD&quot;&gt;&lt;mi&gt;x&lt;/mi&gt;&lt;mo&gt;&amp;#x2212;&lt;/mo&gt;&lt;mn&gt;1&lt;/mn&gt;&lt;/mrow&gt;&lt;/msub&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-245" style="width: 6.843em; display: inline-block;"><span style="display: inline-block; position: relative; width: 5.906em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.455em, 1005.91em, 2.767em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-246"><span class="mo" id="MathJax-Span-247" style="font-family: MathJax_Main;">(</span><span class="mn" id="MathJax-Span-248" style="font-family: MathJax_Main;">1</span><span class="mo" id="MathJax-Span-249" style="font-family: MathJax_Main; padding-left: 0.237em;">−</span><span class="mi" id="MathJax-Span-250" style="font-family: MathJax_Math-italic; padding-left: 0.237em;">α</span><span class="mo" id="MathJax-Span-251" style="font-family: MathJax_Main;">)</span><span class="mo" id="MathJax-Span-252" style="font-family: MathJax_Main; padding-left: 0.237em;">⋅</span><span class="msubsup" id="MathJax-Span-253" style="padding-left: 0.237em;"><span style="display: inline-block; position: relative; width: 1.97em; height: 0px;"><span style="position: absolute; clip: rect(3.141em, 1000.52em, 4.313em, -999.998em); top: -3.98em; left: 0em;"><span class="texatom" id="MathJax-Span-254"><span class="mrow" id="MathJax-Span-255"><span class="munderover" id="MathJax-Span-256"><span style="display: inline-block; position: relative; width: 0.565em; height: 0px;"><span style="position: absolute; clip: rect(3.423em, 1000.52em, 4.313em, -999.998em); top: -3.98em; left: 0.002em;"><span class="mi" id="MathJax-Span-257" style="font-family: MathJax_Math-italic;">y<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.002em;"></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; clip: rect(3.141em, 1000.38em, 3.61em, -999.998em); top: -4.027em; left: 0.096em;"><span class="mo" id="MathJax-Span-258" style="font-family: MathJax_Main;">^</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; top: -3.746em; left: 0.565em;"><span class="texatom" id="MathJax-Span-259"><span class="mrow" id="MathJax-Span-260"><span class="mi" id="MathJax-Span-261" style="font-size: 70.7%; font-family: MathJax_Math-italic;">x</span><span class="mo" id="MathJax-Span-262" style="font-size: 70.7%; font-family: MathJax_Main;">−</span><span class="mn" id="MathJax-Span-263" style="font-size: 70.7%; font-family: MathJax_Main;">1</span></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.378em; border-left: 0px solid; width: 0px; height: 1.307em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mi>α</mi><mo stretchy="false">)</mo><mo>⋅</mo><msub><mrow class="MJX-TeXAtom-ORD"><mover><mi>y</mi><mo stretchy="false">^</mo></mover></mrow><mrow class="MJX-TeXAtom-ORD"><mi>x</mi><mo>−</mo><mn>1</mn></mrow></msub></math></span></span><script type="math/tex" id="MathJax-Element-23">(1-\alpha) \cdot \hat{y}_{x-1}</script>. You can think of <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-24-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;&amp;#x03B1;&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-264" style="width: 0.799em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.658em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.783em, 1000.61em, 2.485em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-265"><span class="mi" id="MathJax-Span-266" style="font-family: MathJax_Math-italic;">α</span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.052em; border-left: 0px solid; width: 0px; height: 0.655em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>α</mi></math></span></span><script type="math/tex" id="MathJax-Element-24">\alpha</script> (alpha)
+as a sort of a starting weight 0.9 in the above (problematic)
+example. It is called the <em>smoothing factor</em> or <em>smoothing
+coefficient</em> (depending on who wrote your text book).</p>
+
+<p>So essentially we’ve got a weighted moving average with two weights:
+<span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-25-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;&amp;#x03B1;&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-267" style="width: 0.799em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.658em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.783em, 1000.61em, 2.485em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-268"><span class="mi" id="MathJax-Span-269" style="font-family: MathJax_Math-italic;">α</span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.052em; border-left: 0px solid; width: 0px; height: 0.655em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>α</mi></math></span></span><script type="math/tex" id="MathJax-Element-25">\alpha</script> and <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-26-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mn&gt;1&lt;/mn&gt;&lt;mo&gt;&amp;#x2212;&lt;/mo&gt;&lt;mi&gt;&amp;#x03B1;&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-270" style="width: 2.767em; display: inline-block;"><span style="display: inline-block; position: relative; width: 2.392em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.548em, 1002.35em, 2.579em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-271"><span class="mn" id="MathJax-Span-272" style="font-family: MathJax_Main;">1</span><span class="mo" id="MathJax-Span-273" style="font-family: MathJax_Main; padding-left: 0.237em;">−</span><span class="mi" id="MathJax-Span-274" style="font-family: MathJax_Math-italic; padding-left: 0.237em;">α</span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.16em; border-left: 0px solid; width: 0px; height: 0.981em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mn>1</mn><mo>−</mo><mi>α</mi></math></span></span><script type="math/tex" id="MathJax-Element-26">1-\alpha</script>.  The sum of <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-27-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;&amp;#x03B1;&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-275" style="width: 0.799em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.658em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.783em, 1000.61em, 2.485em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-276"><span class="mi" id="MathJax-Span-277" style="font-family: MathJax_Math-italic;">α</span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.052em; border-left: 0px solid; width: 0px; height: 0.655em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>α</mi></math></span></span><script type="math/tex" id="MathJax-Element-27">\alpha</script> and <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-28-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mn&gt;1&lt;/mn&gt;&lt;mo&gt;&amp;#x2212;&lt;/mo&gt;&lt;mi&gt;&amp;#x03B1;&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-278" style="width: 2.767em; display: inline-block;"><span style="display: inline-block; position: relative; width: 2.392em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.548em, 1002.35em, 2.579em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-279"><span class="mn" id="MathJax-Span-280" style="font-family: MathJax_Main;">1</span><span class="mo" id="MathJax-Span-281" style="font-family: MathJax_Main; padding-left: 0.237em;">−</span><span class="mi" id="MathJax-Span-282" style="font-family: MathJax_Math-italic; padding-left: 0.237em;">α</span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.16em; border-left: 0px solid; width: 0px; height: 0.981em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mn>1</mn><mo>−</mo><mi>α</mi></math></span></span><script type="math/tex" id="MathJax-Element-28">1-\alpha</script> is 1, so
+all is well.</p>
+
+<p>Now let’s zoom in on the right side of the sum. Cleverly, <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-29-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mn&gt;1&lt;/mn&gt;&lt;mo&gt;&amp;#x2212;&lt;/mo&gt;&lt;mi&gt;&amp;#x03B1;&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-283" style="width: 2.767em; display: inline-block;"><span style="display: inline-block; position: relative; width: 2.392em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.548em, 1002.35em, 2.579em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-284"><span class="mn" id="MathJax-Span-285" style="font-family: MathJax_Main;">1</span><span class="mo" id="MathJax-Span-286" style="font-family: MathJax_Main; padding-left: 0.237em;">−</span><span class="mi" id="MathJax-Span-287" style="font-family: MathJax_Math-italic; padding-left: 0.237em;">α</span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.16em; border-left: 0px solid; width: 0px; height: 0.981em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mn>1</mn><mo>−</mo><mi>α</mi></math></span></span><script type="math/tex" id="MathJax-Element-29">1-\alpha</script>
+is multiplied by the <em>previous</em> expected value
+<span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-30-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;msub&gt;&lt;mrow class=&quot;MJX-TeXAtom-ORD&quot;&gt;&lt;mover&gt;&lt;mi&gt;y&lt;/mi&gt;&lt;mo stretchy=&quot;false&quot;&gt;&amp;#x005E;&lt;/mo&gt;&lt;/mover&gt;&lt;/mrow&gt;&lt;mrow class=&quot;MJX-TeXAtom-ORD&quot;&gt;&lt;mi&gt;x&lt;/mi&gt;&lt;mo&gt;&amp;#x2212;&lt;/mo&gt;&lt;mn&gt;1&lt;/mn&gt;&lt;/mrow&gt;&lt;/msub&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-288" style="width: 2.298em; display: inline-block;"><span style="display: inline-block; position: relative; width: 1.97em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.502em, 1001.97em, 2.767em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-289"><span class="msubsup" id="MathJax-Span-290"><span style="display: inline-block; position: relative; width: 1.97em; height: 0px;"><span style="position: absolute; clip: rect(3.141em, 1000.52em, 4.313em, -999.998em); top: -3.98em; left: 0em;"><span class="texatom" id="MathJax-Span-291"><span class="mrow" id="MathJax-Span-292"><span class="munderover" id="MathJax-Span-293"><span style="display: inline-block; position: relative; width: 0.565em; height: 0px;"><span style="position: absolute; clip: rect(3.423em, 1000.52em, 4.313em, -999.998em); top: -3.98em; left: 0.002em;"><span class="mi" id="MathJax-Span-294" style="font-family: MathJax_Math-italic;">y<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.002em;"></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; clip: rect(3.141em, 1000.38em, 3.61em, -999.998em); top: -4.027em; left: 0.096em;"><span class="mo" id="MathJax-Span-295" style="font-family: MathJax_Main;">^</span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span><span style="position: absolute; top: -3.746em; left: 0.565em;"><span class="texatom" id="MathJax-Span-296"><span class="mrow" id="MathJax-Span-297"><span class="mi" id="MathJax-Span-298" style="font-size: 70.7%; font-family: MathJax_Math-italic;">x</span><span class="mo" id="MathJax-Span-299" style="font-size: 70.7%; font-family: MathJax_Main;">−</span><span class="mn" id="MathJax-Span-300" style="font-size: 70.7%; font-family: MathJax_Main;">1</span></span></span><span style="display: inline-block; width: 0px; height: 3.985em;"></span></span></span></span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.378em; border-left: 0px solid; width: 0px; height: 1.307em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><msub><mrow class="MJX-TeXAtom-ORD"><mover><mi>y</mi><mo stretchy="false">^</mo></mover></mrow><mrow class="MJX-TeXAtom-ORD"><mi>x</mi><mo>−</mo><mn>1</mn></mrow></msub></math></span></span><script type="math/tex" id="MathJax-Element-30">\hat{y}_{x-1}</script>. Which, if you think about it, is the result of the
+same formula, which makes the expression recursive (and programmers
+love recursion), and if you were to write it all out on paper you would
+quickly see that <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-31-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mo stretchy=&quot;false&quot;&gt;(&lt;/mo&gt;&lt;mn&gt;1&lt;/mn&gt;&lt;mo&gt;&amp;#x2212;&lt;/mo&gt;&lt;mi&gt;&amp;#x03B1;&lt;/mi&gt;&lt;mo stretchy=&quot;false&quot;&gt;)&lt;/mo&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-301" style="width: 3.704em; display: inline-block;"><span style="display: inline-block; position: relative; width: 3.188em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.455em, 1003.1em, 2.72em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-302"><span class="mo" id="MathJax-Span-303" style="font-family: MathJax_Main;">(</span><span class="mn" id="MathJax-Span-304" style="font-family: MathJax_Main;">1</span><span class="mo" id="MathJax-Span-305" style="font-family: MathJax_Main; padding-left: 0.237em;">−</span><span class="mi" id="MathJax-Span-306" style="font-family: MathJax_Math-italic; padding-left: 0.237em;">α</span><span class="mo" id="MathJax-Span-307" style="font-family: MathJax_Main;">)</span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.323em; border-left: 0px solid; width: 0px; height: 1.253em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mi>α</mi><mo stretchy="false">)</mo></math></span></span><script type="math/tex" id="MathJax-Element-31">(1-\alpha)</script> is multiplied by itself again and again
+all the way to beginning of the series, if there is one, infinitely
+otherwise. And this is why this method is called
+<em>exponential</em>.</p>
+
+<p>Another important thing about <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-32-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;&amp;#x03B1;&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-308" style="width: 0.799em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.658em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.783em, 1000.61em, 2.485em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-309"><span class="mi" id="MathJax-Span-310" style="font-family: MathJax_Math-italic;">α</span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.052em; border-left: 0px solid; width: 0px; height: 0.655em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>α</mi></math></span></span><script type="math/tex" id="MathJax-Element-32">\alpha</script> is that its value dictates how
+much weight we give the most recent observed value versus the last
+expected. It’s a kind of a lever that gives more weight to the left
+side when it’s higher (closer to 1) or the right side when it’s lower
+(closer to 0).</p>
+
+<p>Perhaps <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-33-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;&amp;#x03B1;&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-311" style="width: 0.799em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.658em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.783em, 1000.61em, 2.485em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-312"><span class="mi" id="MathJax-Span-313" style="font-family: MathJax_Math-italic;">α</span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.052em; border-left: 0px solid; width: 0px; height: 0.655em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>α</mi></math></span></span><script type="math/tex" id="MathJax-Element-33">\alpha</script> would be better referred to as <em>memory decay rate</em>: the
+higher the <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-34-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;&amp;#x03B1;&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-314" style="width: 0.799em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.658em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.783em, 1000.61em, 2.485em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-315"><span class="mi" id="MathJax-Span-316" style="font-family: MathJax_Math-italic;">α</span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.052em; border-left: 0px solid; width: 0px; height: 0.655em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>α</mi></math></span></span><script type="math/tex" id="MathJax-Element-34">\alpha</script>, the faster the method “forgets”.</p>
+
+<h4 id="why-is-it-called-smoothing">Why is it called “smoothing”?</h4>
+
+<p>To the best of my understanding this simply refers to the effect these
+methods have on a graph if you were to plot the values: jagged lines
+become smoother.  Moving average also has the same effect, so it
+deserves the right to be called smoothing just as well.</p>
+
+<h4 id="implementation">Implementation</h4>
+
+<p>There is an aspect of this method that programmers would appreciate
+that is of no concern to mathematicians: it’s simple and efficient to
+implement. Here is some Python. Unlike the previous examples, this
+function returns expected values for the whole series, not just one
+point.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="highlight"><table><tbody><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+</pre></td><td class="code"><pre><code class="python"><span class="line"><span class="c"># given a series and alpha, return series of smoothed points</span>
+</span><span class="line"><span class="k">def</span> <span class="nf">exponential_smoothing</span><span class="p">(</span><span class="n">series</span><span class="p">,</span> <span class="n">alpha</span><span class="p">):</span>
+</span><span class="line">    <span class="n">result</span> <span class="o">=</span> <span class="p">[</span><span class="n">series</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="c"># first value is same as series</span>
+</span><span class="line">    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">series</span><span class="p">)):</span>
+</span><span class="line">        <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">alpha</span> <span class="o">*</span> <span class="n">series</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">alpha</span><span class="p">)</span> <span class="o">*</span> <span class="n">result</span><span class="p">[</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+</span><span class="line">    <span class="k">return</span> <span class="n">result</span>
+</span><span class="line">
+</span><span class="line"><span class="c"># &gt;&gt;&gt; exponential_smoothing(series, 0.1)</span>
+</span><span class="line"><span class="c"># [3, 3.7, 4.53, 5.377, 6.0393, 6.43537, 6.991833]</span>
+</span><span class="line"><span class="c"># &gt;&gt;&gt; exponential_smoothing(series, 0.9)</span>
+</span><span class="line"><span class="c"># [3, 9.3, 11.73, 12.873000000000001, 12.0873, 10.20873, 11.820873]</span>
+</span></code></pre></td></tr></tbody></table></div></figure></notextile></div>
+
+<p>The figure below shows exponentially smoothed version of our series
+with <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-35-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;&amp;#x03B1;&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-317" style="width: 0.799em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.658em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.783em, 1000.61em, 2.485em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-318"><span class="mi" id="MathJax-Span-319" style="font-family: MathJax_Math-italic;">α</span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.052em; border-left: 0px solid; width: 0px; height: 0.655em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>α</mi></math></span></span><script type="math/tex" id="MathJax-Element-35">\alpha</script> of 0.9 (red) and <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-36-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;&amp;#x03B1;&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-320" style="width: 0.799em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.658em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.783em, 1000.61em, 2.485em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-321"><span class="mi" id="MathJax-Span-322" style="font-family: MathJax_Math-italic;">α</span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.052em; border-left: 0px solid; width: 0px; height: 0.655em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>α</mi></math></span></span><script type="math/tex" id="MathJax-Element-36">\alpha</script> of 0.1 (orange).</p>
+
+<p><img src="./Holt-Winters Forecasting for Dummies (or Developers) - Part I - Gregory Trubetskoy_files/hw02.png"></p>
+
+<p>Looking at the above picture it is apparent that the <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-37-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;&amp;#x03B1;&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-323" style="width: 0.799em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.658em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.783em, 1000.61em, 2.485em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-324"><span class="mi" id="MathJax-Span-325" style="font-family: MathJax_Math-italic;">α</span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.052em; border-left: 0px solid; width: 0px; height: 0.655em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>α</mi></math></span></span><script type="math/tex" id="MathJax-Element-37">\alpha</script> value of 0.9
+follows the observed values much closer than 0.1. This isn’t going to
+be true for any series, each series has its best <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-38-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;&amp;#x03B1;&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-326" style="width: 0.799em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.658em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.783em, 1000.61em, 2.485em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-327"><span class="mi" id="MathJax-Span-328" style="font-family: MathJax_Math-italic;">α</span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.052em; border-left: 0px solid; width: 0px; height: 0.655em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>α</mi></math></span></span><script type="math/tex" id="MathJax-Element-38">\alpha</script> (or
+several). The process of finding the best <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-39-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;&amp;#x03B1;&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-329" style="width: 0.799em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.658em; height: 0px; font-size: 116%;"><span style="position: absolute; clip: rect(1.783em, 1000.61em, 2.485em, -999.998em); top: -2.34em; left: 0em;"><span class="mrow" id="MathJax-Span-330"><span class="mi" id="MathJax-Span-331" style="font-family: MathJax_Math-italic;">α</span></span><span style="display: inline-block; width: 0px; height: 2.345em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.052em; border-left: 0px solid; width: 0px; height: 0.655em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>α</mi></math></span></span><script type="math/tex" id="MathJax-Element-39">\alpha</script> is referred to as
+<em>fitting</em> and we will discuss it later separately.</p>
+
+<h2 id="quick-review">Quick Review</h2>
+
+<p>We’ve learned some history, basic terminology (series and how it knows
+no time, method, error SSE, MSE and fitting). And we’ve learned some
+basic forecasting methods: naive, simple average, moving average,
+weighted moving average and, finally, single exponential smoothing.</p>
+
+<p>One very important characteristic of all of the above methods is that
+remarkably, they can only forecast a <em>single</em> point. That’s correct,
+just one.</p>
+
+<p>In <a href="https://grisha.org/blog/2016/02/16/triple-exponential-smoothing-forecasting-part-ii/">Part II</a> we will focus on methods that can forecast more than
+one point.</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Gregory Trubetskoy</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2016-01-29T15:36:00-05:00" pubdate="" data-updated="true">Jan 29<span>th</span>, 2016</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="https://twitter.com/share" class="twitter-share-button" data-url="http://grisha.org/blog/2016/01/29/triple-exponential-smoothing-forecasting/" data-via="humblehack" data-counturl="http://grisha.org/blog/2016/01/29/triple-exponential-smoothing-forecasting/">Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="https://grisha.org/blog/2015/09/23/storing-time-series-in-postgresql-efficiently/" title="Previous Post: Storing Time Series in PostgreSQL efficiently">« Storing Time Series in PostgreSQL efficiently</a>
+      
+      
+        <a class="basic-alignment right" href="https://grisha.org/blog/2016/02/16/triple-exponential-smoothing-forecasting-part-ii/" title="Next Post: Holt-Winters Forecasting for Dummies - Part II">Holt-Winters Forecasting for Dummies - Part II »</a>
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><iframe id="dsq-app8804" name="dsq-app8804" allowtransparency="true" frameborder="0" scrolling="no" tabindex="0" title="Disqus" width="100%" src="./Holt-Winters Forecasting for Dummies (or Developers) - Part I - Gregory Trubetskoy_files/saved_resource.html" style="width: 1px !important; min-width: 100% !important; border: none !important; overflow: hidden !important; height: 10035px !important;" horizontalscrolling="no" verticalscrolling="no"></iframe></div>
+  </section>
+
+</div>
+
+<aside class="sidebar thirds">
+  
+    
+
+<section class="first odd">
+  <h1>Most Popular</h1>
+  <ul id="recent_posts">
+    <li class="post">
+        <a href="https://grisha.org/blog/2018/01/23/explaining-proof-of-work/">Blockchain Proof-of-Work is a Decentralized Clock</a>
+    </li>
+    <li class="post">
+        <a href="https://grisha.org/blog/2016/01/29/triple-exponential-smoothing-forecasting/">Holt-Winters Forecasting for Dummies (or Developers) - Part I</a>
+    </li>
+  </ul>
+</section>
+
+<section class="even">
+<!--  <h1>About Me</h1> -->
+
+  <p>
+  </p><div style="width: 75%; margin: 0 auto;">
+  <a href="https://twitter.com/humblehack" class="twitter-follow-button" data-show-count="">Follow @humblehack</a>
+  </div>
+  <p></p>
+
+</section>
+<section class="odd">
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="https://grisha.org/blog/2018/10/18/relative-imports-hack-in-go/">Relative Imports Hack in Golang</a>
+      </li>
+    
+      <li class="post">
+        <a href="https://grisha.org/blog/2018/01/23/explaining-proof-of-work/">Blockchain Proof-of-Work is a Decentralized Clock</a>
+      </li>
+    
+      <li class="post">
+        <a href="https://grisha.org/blog/2017/12/15/blockchain-and-postgres/">The Bitcoin Blockchain PostgresSQL Schema</a>
+      </li>
+    
+      <li class="post">
+        <a href="https://grisha.org/blog/2017/10/20/blockchain-in-postgresql-part-2/">Blockchain in PostgreSQL Part 2</a>
+      </li>
+    
+      <li class="post">
+        <a href="https://grisha.org/blog/2017/10/10/postgre-as-a-full-node/">Bitcoin Transaction Hash in Pure PostgreSQL</a>
+      </li>
+    
+  </ul>
+</section>
+
+<br><br><br>
+<br><br><br>
+<br><br><br>
+
+
+
+
+
+  
+</aside>
+
+
+    <span class="toggle-sidebar"></span></div>
+  </div>
+  <footer role="contentinfo"><p>
+  <img src="./Holt-Winters Forecasting for Dummies (or Developers) - Part I - Gregory Trubetskoy_files/grisha_org.gif" height="1" width="1">
+  Copyright © 2022 - Gregory Trubetskoy -
+  <span class="credit">Powered by <a href="http://octopress.org/">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'grisha';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://grisha.org/blog/2016/01/29/triple-exponential-smoothing-forecasting/';
+        var disqus_url = 'http://grisha.org/blog/2016/01/29/triple-exponential-smoothing-forecasting/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'https://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'https://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+
+
+<iframe style="display: none;" src="./Holt-Winters Forecasting for Dummies (or Developers) - Part I - Gregory Trubetskoy_files/saved_resource(1).html"></iframe><div style="position: absolute; width: 0px; height: 0px; overflow: hidden; padding: 0px; border: 0px; margin: 0px;"><div id="MathJax_Font_Test" style="position: absolute; visibility: hidden; top: 0px; left: 0px; width: auto; padding: 0px; border: 0px; margin: 0px; white-space: nowrap; text-align: left; text-indent: 0px; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal; font-size: 40px; font-weight: normal; font-style: normal; font-family: MathJax_Size2, sans-serif;"></div></div></body></html>
